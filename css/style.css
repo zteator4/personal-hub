@@ -1,0 +1,1129 @@
+/* ============================================================
+   DayDeck — style.css
+   Design system: CSS variables → base → layout → widgets → components
+   ============================================================ */
+
+/* ── 1. Google Fonts already loaded via <link> in HTML ─────── */
+
+/* ── 2. CSS Custom Properties (Themes) ─────────────────────── */
+:root {
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-body:    'DM Sans', system-ui, sans-serif;
+  --font-mono:    'DM Mono', monospace;
+
+  --radius-sm:  6px;
+  --radius-md:  12px;
+  --radius-lg:  18px;
+  --radius-xl:  24px;
+
+  --transition: 0.18s ease;
+
+  /* Accent colors (overridden by data-accent on <html>) */
+  --accent:         #3B8BD4;
+  --accent-light:   #E6F1FB;
+  --accent-dark:    #185FA5;
+}
+
+/* Dark theme (default) */
+[data-theme="dark"] {
+  --bg-page:    #0f0f11;
+  --bg-card:    #17171a;
+  --bg-card-2:  #1e1e22;
+  --bg-input:   #1e1e22;
+  --border:     rgba(255,255,255,0.08);
+  --border-mid: rgba(255,255,255,0.14);
+  --text-1:     #f0efe8;
+  --text-2:     #9a9892;
+  --text-3:     #5c5b57;
+  --shadow:     0 4px 24px rgba(0,0,0,0.4);
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --bg-page:    #f4f2ed;
+  --bg-card:    #ffffff;
+  --bg-card-2:  #f8f7f4;
+  --bg-input:   #f4f2ed;
+  --border:     rgba(0,0,0,0.07);
+  --border-mid: rgba(0,0,0,0.12);
+  --text-1:     #1a1a18;
+  --text-2:     #6b6a64;
+  --text-3:     #a8a7a1;
+  --shadow:     0 4px 24px rgba(0,0,0,0.08);
+}
+
+/* OLED theme (true black) */
+[data-theme="oled"] {
+  --bg-page:    #000000;
+  --bg-card:    #0a0a0a;
+  --bg-card-2:  #111111;
+  --bg-input:   #111111;
+  --border:     rgba(255,255,255,0.06);
+  --border-mid: rgba(255,255,255,0.12);
+  --text-1:     #ffffff;
+  --text-2:     #888888;
+  --text-3:     #444444;
+  --shadow:     0 4px 24px rgba(0,0,0,0.8);
+}
+
+/* Accent overrides */
+[data-accent="blue"]   { --accent:#3B8BD4; --accent-light:#E6F1FB; --accent-dark:#185FA5; }
+[data-accent="purple"] { --accent:#7F77DD; --accent-light:#EEEDFE; --accent-dark:#534AB7; }
+[data-accent="teal"]   { --accent:#1D9E75; --accent-light:#E1F5EE; --accent-dark:#0F6E56; }
+[data-accent="coral"]  { --accent:#D85A30; --accent-light:#FAECE7; --accent-dark:#993C1D; }
+[data-accent="amber"]  { --accent:#BA7517; --accent-light:#FAEEDA; --accent-dark:#854F0B; }
+
+
+/* ── 3. Reset & Base ────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-family: var(--font-body);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: var(--bg-page);
+  color: var(--text-1);
+  min-height: 100dvh;
+  transition: background var(--transition), color var(--transition);
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+input {
+  font-family: var(--font-body);
+  font-size: 0.93rem;
+  color: var(--text-1);
+  background: var(--bg-input);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  outline: none;
+  transition: border-color var(--transition);
+}
+input:focus { border-color: var(--accent); }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.hidden { display: none !important; }
+
+
+/* ── 4. Utility Classes ─────────────────────────────────────── */
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  padding: 0.6rem 1.4rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: opacity var(--transition), transform var(--transition);
+}
+.btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-primary:active { transform: scale(0.97); }
+
+.btn-ghost {
+  color: var(--text-2);
+  padding: 0.6rem 1rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  transition: color var(--transition);
+}
+.btn-ghost:hover { color: var(--text-1); }
+
+.btn-danger {
+  color: #E24B4A;
+  border: 1px solid rgba(226,75,74,0.3);
+  padding: 0.55rem 1.2rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  transition: background var(--transition);
+}
+.btn-danger:hover { background: rgba(226,75,74,0.08); }
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  font-size: 1rem;
+  transition: background var(--transition), color var(--transition);
+}
+.icon-btn:hover { background: var(--bg-card-2); color: var(--text-1); }
+
+
+/* ── 5. Onboarding ──────────────────────────────────────────── */
+.onboarding {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-page);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.onboarding-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-xl);
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: var(--shadow);
+  position: relative;
+}
+
+.ob-step {
+  display: none;
+  flex-direction: column;
+  gap: 1rem;
+  animation: fadeUp 0.25s ease both;
+}
+.ob-step.active { display: flex; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.ob-icon {
+  font-size: 2.5rem;
+  color: var(--accent);
+  margin-bottom: 0.25rem;
+}
+
+.onboarding-card h1 {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.onboarding-card h2 {
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.onboarding-card p {
+  color: var(--text-2);
+  font-size: 0.93rem;
+  line-height: 1.6;
+}
+
+.ob-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ob-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+
+.ob-fields label em { color: var(--text-3); font-style: normal; }
+
+.ob-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.ob-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.ob-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border-mid);
+  transition: background var(--transition), width var(--transition);
+}
+.ob-dot.active {
+  background: var(--accent);
+  width: 18px;
+  border-radius: 3px;
+}
+
+/* Onboarding widget toggles */
+.ob-widget-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+}
+
+.ob-widget-toggle input { display: none; }
+
+.owt-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0.6rem 0.4rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-mid);
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+  font-size: 0.72rem;
+  color: var(--text-2);
+}
+
+.owt-icon { font-size: 1.1rem; color: var(--text-2); }
+
+.ob-widget-toggle input:checked + .owt-box {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent-dark);
+}
+
+.ob-widget-toggle input:checked + .owt-box .owt-icon {
+  color: var(--accent);
+}
+
+/* Theme & accent pickers */
+.ob-theme-row,
+.settings-theme-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.theme-pill {
+  padding: 0.45rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-mid);
+  font-size: 0.85rem;
+  color: var(--text-2);
+  transition: all var(--transition);
+}
+.theme-pill:hover { border-color: var(--accent); color: var(--accent); }
+.theme-pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.ob-accent-row,
+.settings-accent-row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.accent-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  transition: border-color var(--transition), transform var(--transition);
+}
+.accent-dot:hover { transform: scale(1.1); }
+.accent-dot.active {
+  border-color: var(--text-1);
+  outline: 2px solid var(--bg-card);
+  outline-offset: -4px;
+}
+
+
+/* ── 6. App Shell ───────────────────────────────────────────── */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--accent);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.header-center {
+  font-size: 0.9rem;
+  color: var(--text-2);
+  text-align: center;
+  flex: 1;
+}
+
+.header-right {
+  display: flex;
+  gap: 4px;
+}
+
+/* ── AI Brief Bar ───────────────────────────────────────────── */
+.brief-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1.5rem;
+  background: var(--bg-card-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.brief-icon {
+  color: var(--accent);
+  font-size: 1rem;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.brief-text {
+  flex: 1;
+  color: var(--text-2);
+}
+
+.brief-loading {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+.brief-refresh {
+  color: var(--text-3);
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  padding-top: 1px;
+  transition: color var(--transition), transform var(--transition);
+}
+.brief-refresh:hover { color: var(--accent); transform: rotate(180deg); }
+
+/* Focus mode */
+body.focus-mode .brief-bar,
+body.focus-mode .widget:not([data-widget="clock"]):not([data-widget="todo"]) {
+  opacity: 0.06;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+body.focus-mode .widget[data-widget="clock"],
+body.focus-mode .widget[data-widget="todo"] {
+  opacity: 1;
+}
+
+
+/* ── 7. Widget Grid ─────────────────────────────────────────── */
+.widget-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  align-items: start;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 600px) {
+  .widget-grid { grid-template-columns: 1fr; padding: 0.75rem; gap: 0.75rem; }
+  .app-header { padding: 0.6rem 0.75rem; }
+  .brief-bar { padding: 0.75rem; }
+}
+
+@media (min-width: 900px) {
+  .widget-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (min-width: 1200px) {
+  .widget-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+
+/* ── 8. Widget Base ─────────────────────────────────────────── */
+.widget {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: box-shadow var(--transition), border-color var(--transition), opacity 0.4s ease;
+}
+
+.widget:hover {
+  border-color: var(--border-mid);
+}
+
+.widget-inner {
+  padding: 1.1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 100%;
+}
+
+.widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.widget-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+.widget-action {
+  font-size: 0.85rem;
+  color: var(--text-3);
+  transition: color var(--transition), transform var(--transition);
+  padding: 2px 4px;
+}
+.widget-action:hover { color: var(--accent); transform: rotate(180deg); }
+
+/* 2-column wide widget */
+.widget[data-size="2"] {
+  grid-column: span 2;
+}
+@media (max-width: 899px) {
+  .widget[data-size="2"] { grid-column: span 1; }
+}
+
+
+/* ── 9. Clock Widget ────────────────────────────────────────── */
+.widget--clock .widget-inner {
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 120px;
+  padding: 1.4rem 1.4rem;
+}
+
+.clock-time {
+  font-family: var(--font-mono);
+  font-size: clamp(2.6rem, 5vw, 4.2rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+  line-height: 1;
+}
+
+.clock-date {
+  font-size: 0.88rem;
+  color: var(--text-2);
+  margin-top: 0.3rem;
+}
+
+
+/* ── 10. Weather Widget ─────────────────────────────────────── */
+.weather-main {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.weather-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.weather-temp {
+  font-size: 2rem;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  font-family: var(--font-mono);
+}
+
+.weather-desc {
+  font-size: 0.875rem;
+  color: var(--text-2);
+  text-transform: capitalize;
+}
+
+.weather-details {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.78rem;
+  color: var(--text-3);
+}
+
+.weather-location {
+  font-size: 0.78rem;
+  color: var(--text-3);
+}
+
+.weather-forecast {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.forecast-day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.72rem;
+  color: var(--text-2);
+}
+
+.forecast-day .fd-icon { font-size: 1rem; }
+.forecast-day .fd-temp { color: var(--text-1); font-weight: 500; }
+.forecast-day .fd-label { color: var(--text-3); }
+
+
+/* ── 11. To-Do Widget ───────────────────────────────────────── */
+.todo-count {
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+
+.todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition);
+  cursor: pointer;
+}
+.todo-item:hover { background: var(--bg-card-2); }
+
+.todo-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border-mid);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  cursor: pointer;
+}
+
+.todo-item.done .todo-checkbox {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-size: 0.7rem;
+}
+
+.todo-text {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--text-1);
+  transition: color var(--transition);
+}
+
+.todo-item.done .todo-text {
+  text-decoration: line-through;
+  color: var(--text-3);
+}
+
+.todo-delete {
+  opacity: 0;
+  color: var(--text-3);
+  font-size: 0.75rem;
+  padding: 2px 4px;
+  transition: opacity var(--transition), color var(--transition);
+}
+.todo-item:hover .todo-delete { opacity: 1; }
+.todo-delete:hover { color: #E24B4A; }
+
+.todo-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.todo-input {
+  flex: 1;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.7rem;
+}
+
+.todo-add-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: opacity var(--transition);
+}
+.todo-add-btn:hover { opacity: 0.82; }
+
+
+/* ── 12. News Widget ────────────────────────────────────────── */
+.news-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.news-item {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.news-item:last-child { border-bottom: none; }
+
+.news-item a {
+  font-size: 0.855rem;
+  color: var(--text-1);
+  line-height: 1.4;
+  font-weight: 400;
+}
+.news-item a:hover { color: var(--accent); text-decoration: none; }
+
+.news-source {
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
+.news-empty {
+  font-size: 0.85rem;
+  color: var(--text-3);
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.news-api-note {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  text-align: center;
+  line-height: 1.4;
+  padding: 0.5rem 0;
+}
+
+
+/* ── 13. Sports Widget ──────────────────────────────────────── */
+.sports-game {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sports-teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sports-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.sports-team-name {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  text-align: center;
+}
+
+.sports-score {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.sports-vs {
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
+.sports-status {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.sports-empty {
+  font-size: 0.85rem;
+  color: var(--text-3);
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+
+/* ── 14. Quote Widget ───────────────────────────────────────── */
+.widget--quote .widget-inner {
+  position: relative;
+}
+
+.quote-mark {
+  font-family: var(--font-display);
+  font-size: 4rem;
+  color: var(--accent);
+  opacity: 0.25;
+  line-height: 0.8;
+  margin-bottom: -0.5rem;
+}
+
+.quote-text {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  line-height: 1.55;
+  font-style: italic;
+  color: var(--text-1);
+}
+
+.quote-author {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  margin-top: 0.25rem;
+}
+
+.quote-refresh {
+  position: absolute;
+  bottom: 1rem;
+  right: 1.2rem;
+  color: var(--text-3);
+  font-size: 0.9rem;
+  transition: color var(--transition), transform var(--transition);
+}
+.quote-refresh:hover { color: var(--accent); transform: rotate(180deg); }
+
+
+/* ── 15. Market Widget ──────────────────────────────────────── */
+.market-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.market-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+.market-item:last-child { border-bottom: none; }
+
+.market-name {
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.market-symbol {
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
+.market-price { font-family: var(--font-mono); color: var(--text-1); }
+
+.market-change.up   { color: #3B6D11; }
+.market-change.down { color: #A32D2D; }
+[data-theme="dark"] .market-change.up   { color: #97C459; }
+[data-theme="dark"] .market-change.down { color: #F09595; }
+[data-theme="oled"] .market-change.up   { color: #97C459; }
+[data-theme="oled"] .market-change.down { color: #F09595; }
+
+
+/* ── 16. Habit Widget ───────────────────────────────────────── */
+.habit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.habit-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.habit-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-mid);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.habit-item.done .habit-check {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-size: 0.7rem;
+}
+
+.habit-name { flex: 1; color: var(--text-1); }
+.habit-streak { font-size: 0.72rem; color: var(--accent); }
+
+
+/* ── 17. Countdown Widget ───────────────────────────────────── */
+.countdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.countdown-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.countdown-name {
+  font-size: 0.8rem;
+  color: var(--text-2);
+}
+
+.countdown-value {
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.countdown-sub {
+  font-size: 0.7rem;
+  color: var(--text-3);
+}
+
+
+/* ── 18. Links Widget ───────────────────────────────────────── */
+.links-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.link-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0.6rem 0.3rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  transition: border-color var(--transition), background var(--transition);
+  cursor: pointer;
+}
+.link-item:hover {
+  border-color: var(--accent);
+  background: var(--bg-card-2);
+  text-decoration: none;
+}
+
+.link-icon {
+  font-size: 1.2rem;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.link-label {
+  font-size: 0.68rem;
+  color: var(--text-2);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+
+/* ── 19. Settings Panel ─────────────────────────────────────── */
+.settings-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(380px, 100vw);
+  height: 100dvh;
+  background: var(--bg-card);
+  border-left: 1px solid var(--border-mid);
+  box-shadow: -8px 0 40px rgba(0,0,0,0.25);
+  z-index: 200;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+  overflow-y: auto;
+}
+.settings-panel.open { transform: translateX(0); }
+
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 199;
+  backdrop-filter: blur(2px);
+}
+
+.settings-inner {
+  padding: 1.2rem 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.settings-header h2 { font-size: 1.05rem; font-weight: 500; }
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.settings-section h3 {
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--text-2);
+}
+
+.settings-hint {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  line-height: 1.5;
+}
+
+.settings-widget-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  font-size: 0.875rem;
+  color: var(--text-1);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Toggle switch */
+.toggle-switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--border-mid);
+  transition: background var(--transition);
+  cursor: pointer;
+}
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform var(--transition);
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+.toggle-switch input:checked + .toggle-slider::after { transform: translateX(16px); }
+
+.settings-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+
+/* ── 20. Scrollbar Styling ──────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-mid);
+  border-radius: 999px;
+}
+
+/* ── 21. Loading skeleton ───────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-card-2) 25%, var(--border) 50%, var(--bg-card-2) 75%);
+  background-size: 200% 100%;
+  border-radius: var(--radius-sm);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
