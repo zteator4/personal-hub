@@ -1,335 +1,747 @@
-<!DOCTYPE html>
-<html lang="en" data-theme="dark" data-accent="violet">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DayDeck</title>
-  <link rel="stylesheet" href="css/style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@300;400;500;700;800&family=Clash+Display:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,300;1,9..144,400&family=Syne:wght@400;500;700;800&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
-</head>
-<body>
-
-<!-- ═══════════════════════════════════════════════════════════
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DayDeck</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- ═══════════════════════════════════════════════
      ONBOARDING
-═══════════════════════════════════════════════════════════ -->
-<div id="onboarding" class="ob-overlay">
-  <div class="ob-card">
-
-    <div class="ob-step active" data-step="1">
-      <div class="ob-logo">◈</div>
-      <h1>DayDeck</h1>
-      <p>Your fully customizable personal dashboard. Built around you.</p>
-      <button class="btn-primary" onclick="OB.next()">Get started →</button>
+═══════════════════════════════════════════════ -->
+    <div id="onboarding" class="ob">
+      <div class="ob-card">
+        <div class="ob-step active" data-step="1">
+          <div class="ob-eyebrow">Welcome</div>
+          <h1 class="ob-title">Your Lifestyle OS.</h1>
+          <p class="ob-sub">
+            One place for execution, growth, and everything in between.
+          </p>
+          <button class="btn-primary" onclick="OB.next()">Get started →</button>
+        </div>
+        <div class="ob-step" data-step="2">
+          <div class="ob-eyebrow">Step 1 of 3</div>
+          <h2 class="ob-title">Who are you?</h2>
+          <div class="ob-fields">
+            <label
+              ><span>Your name</span
+              ><input type="text" id="ob-name" placeholder="Alex"
+            /></label>
+            <label
+              ><span>Your city</span
+              ><input type="text" id="ob-city" placeholder="Boston, MA"
+            /></label>
+          </div>
+          <div class="ob-nav">
+            <button class="btn-ghost" onclick="OB.prev()">← Back</button>
+            <button class="btn-primary" onclick="OB.next()">Continue →</button>
+          </div>
+        </div>
+        <div class="ob-step" data-step="3">
+          <div class="ob-eyebrow">Step 2 of 3</div>
+          <h2 class="ob-title">Your focus areas</h2>
+          <div class="ob-fields">
+            <label
+              ><span>Sports team</span
+              ><input type="text" id="ob-team" placeholder="New York Yankees"
+            /></label>
+            <label
+              ><span>News & learning topics</span
+              ><input
+                type="text"
+                id="ob-topics"
+                placeholder="technology, finance, sports"
+            /></label>
+            <label
+              ><span>Daily deep work goal <em>(hours)</em></span
+              ><input
+                type="number"
+                id="ob-dwgoal"
+                placeholder="3"
+                min="1"
+                max="12"
+            /></label>
+          </div>
+          <div class="ob-nav">
+            <button class="btn-ghost" onclick="OB.prev()">← Back</button>
+            <button class="btn-primary" onclick="OB.next()">Continue →</button>
+          </div>
+        </div>
+        <div class="ob-step" data-step="4">
+          <div class="ob-eyebrow">Step 3 of 3</div>
+          <h2 class="ob-title">Pick an accent</h2>
+          <p class="ob-sub">
+            Everything else is warm cream. Just choose your highlight color.
+          </p>
+          <div class="ob-accents">
+            <button
+              class="ob-acc active"
+              data-accent="clay"
+              onclick="OB.setAccent('clay', this)"
+              style="background: #c17a5c"
+            >
+              Clay
+            </button>
+            <button
+              class="ob-acc"
+              data-accent="forest"
+              onclick="OB.setAccent('forest', this)"
+              style="background: #4a7c59"
+            >
+              Forest
+            </button>
+            <button
+              class="ob-acc"
+              data-accent="ink"
+              onclick="OB.setAccent('ink', this)"
+              style="background: #2d3a4a"
+            >
+              Ink
+            </button>
+            <button
+              class="ob-acc"
+              data-accent="ochre"
+              onclick="OB.setAccent('ochre', this)"
+              style="background: #b08a3e"
+            >
+              Ochre
+            </button>
+            <button
+              class="ob-acc"
+              data-accent="plum"
+              onclick="OB.setAccent('plum', this)"
+              style="background: #6b4e7d"
+            >
+              Plum
+            </button>
+          </div>
+          <div class="ob-nav" style="margin-top: 1.5rem">
+            <button class="btn-ghost" onclick="OB.prev()">← Back</button>
+            <button class="btn-primary" onclick="OB.finish()">
+              Launch DayDeck →
+            </button>
+          </div>
+        </div>
+        <div class="ob-dots">
+          <span class="ob-dot active"></span>
+          <span class="ob-dot"></span>
+          <span class="ob-dot"></span>
+          <span class="ob-dot"></span>
+        </div>
+      </div>
     </div>
 
-    <div class="ob-step" data-step="2">
-      <h2>Who are you?</h2>
-      <p>Personalize your greeting and location.</p>
-      <div class="ob-fields">
-        <label><span>Your name</span><input type="text" id="ob-name" placeholder="Alex" /></label>
-        <label><span>Your city</span><input type="text" id="ob-city" placeholder="Boston, MA" /></label>
-      </div>
-      <div class="ob-nav">
-        <button class="btn-ghost" onclick="OB.prev()">← Back</button>
-        <button class="btn-primary" onclick="OB.next()">Continue →</button>
-      </div>
-    </div>
-
-    <div class="ob-step" data-step="3">
-      <h2>Interests</h2>
-      <p>Used for your news feed and AI brief.</p>
-      <div class="ob-fields">
-        <label><span>Favorite sports team</span><input type="text" id="ob-team" placeholder="Boston Celtics" /></label>
-        <label><span>News topics <em>(comma separated)</em></span><input type="text" id="ob-topics" placeholder="technology, sports, finance" /></label>
-      </div>
-      <div class="ob-nav">
-        <button class="btn-ghost" onclick="OB.prev()">← Back</button>
-        <button class="btn-primary" onclick="OB.next()">Continue →</button>
-      </div>
-    </div>
-
-    <div class="ob-step" data-step="4">
-      <h2>Choose widgets</h2>
-      <p>You can add, remove, and rearrange them anytime.</p>
-      <div class="ob-widget-grid">
-        <label class="ob-wtoggle" data-w="clock"><input type="checkbox" checked/><span><i>◷</i>Clock</span></label>
-        <label class="ob-wtoggle" data-w="weather"><input type="checkbox" checked/><span><i>☁</i>Weather</span></label>
-        <label class="ob-wtoggle" data-w="todo"><input type="checkbox" checked/><span><i>✓</i>To-Do</span></label>
-        <label class="ob-wtoggle" data-w="news"><input type="checkbox" checked/><span><i>⊞</i>News</span></label>
-        <label class="ob-wtoggle" data-w="sports"><input type="checkbox" checked/><span><i>⚽</i>Sports</span></label>
-        <label class="ob-wtoggle" data-w="quote"><input type="checkbox" checked/><span><i>"</i>Quote</span></label>
-        <label class="ob-wtoggle" data-w="market"><input type="checkbox"/><span><i>↗</i>Markets</span></label>
-        <label class="ob-wtoggle" data-w="habit"><input type="checkbox"/><span><i>◉</i>Habits</span></label>
-        <label class="ob-wtoggle" data-w="countdown"><input type="checkbox"/><span><i>⧗</i>Countdown</span></label>
-        <label class="ob-wtoggle" data-w="links"><input type="checkbox"/><span><i>⊕</i>Links</span></label>
-      </div>
-      <div class="ob-nav">
-        <button class="btn-ghost" onclick="OB.prev()">← Back</button>
-        <button class="btn-primary" onclick="OB.next()">Continue →</button>
-      </div>
-    </div>
-
-    <div class="ob-step" data-step="5">
-      <h2>Your aesthetic</h2>
-      <p>Pick a background and accent. You can change everything later.</p>
-      <div class="ob-section-label">Background</div>
-      <div class="ob-bg-grid">
-        <button class="ob-bg-btn active" data-bg="aurora" onclick="OB.setBg(this)" style="background:linear-gradient(135deg,#0f0c29,#302b63,#24243e)">Aurora</button>
-        <button class="ob-bg-btn" data-bg="ocean" onclick="OB.setBg(this)" style="background:linear-gradient(135deg,#0575e6,#021b79)">Ocean</button>
-        <button class="ob-bg-btn" data-bg="forest" onclick="OB.setBg(this)" style="background:linear-gradient(135deg,#134e5e,#71b280)">Forest</button>
-        <button class="ob-bg-btn" data-bg="ember" onclick="OB.setBg(this)" style="background:linear-gradient(135deg,#232526,#414345)">Carbon</button>
-        <button class="ob-bg-btn" data-bg="rose" onclick="OB.setBg(this)" style="background:linear-gradient(135deg,#f953c6,#b91d73)">Rose</button>
-        <button class="ob-bg-btn" data-bg="light" onclick="OB.setBg(this)" style="background:linear-gradient(135deg,#e0eafc,#cfdef3);color:#333">Cloud</button>
-      </div>
-      <div class="ob-section-label" style="margin-top:1rem">Accent color</div>
-      <div class="ob-accent-row">
-        <button class="accent-dot active" data-accent="violet" onclick="OB.setAccent('violet',this)" style="background:#7c6ff7"></button>
-        <button class="accent-dot" data-accent="cyan"   onclick="OB.setAccent('cyan',this)"   style="background:#22d3ee"></button>
-        <button class="accent-dot" data-accent="rose"   onclick="OB.setAccent('rose',this)"   style="background:#fb7185"></button>
-        <button class="accent-dot" data-accent="emerald" onclick="OB.setAccent('emerald',this)" style="background:#34d399"></button>
-        <button class="accent-dot" data-accent="amber"  onclick="OB.setAccent('amber',this)"  style="background:#fbbf24"></button>
-        <button class="accent-dot" data-accent="white"  onclick="OB.setAccent('white',this)"  style="background:#ffffff;border:1px solid rgba(255,255,255,0.3)"></button>
-      </div>
-      <div class="ob-nav" style="margin-top:1.5rem">
-        <button class="btn-ghost" onclick="OB.prev()">← Back</button>
-        <button class="btn-primary" onclick="OB.finish()">Launch DayDeck →</button>
-      </div>
-    </div>
-
-    <div class="ob-dots">
-      <span class="ob-dot active"></span>
-      <span class="ob-dot"></span>
-      <span class="ob-dot"></span>
-      <span class="ob-dot"></span>
-      <span class="ob-dot"></span>
-    </div>
-  </div>
-</div>
-
-
-<!-- ═══════════════════════════════════════════════════════════
+    <!-- ═══════════════════════════════════════════════
      MAIN APP
-═══════════════════════════════════════════════════════════ -->
-<div id="app" class="app hidden">
+═══════════════════════════════════════════════ -->
+    <div id="app" class="app hidden">
+      <!-- ── Left Nav Rail ─────────────────────────── -->
+      <nav class="rail">
+        <div class="rail-logo">◈</div>
+        <div class="rail-nav">
+          <button
+            class="rail-btn active"
+            data-view="home"
+            onclick="Nav.go('home', this)"
+            title="Home"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path
+                d="M2 7L9 2L16 7V16H12V11H6V16H2V7Z"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span>Home</span>
+          </button>
+          <button
+            class="rail-btn"
+            data-view="tasks"
+            onclick="Nav.go('tasks', this)"
+            title="Tasks"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect
+                x="2"
+                y="2"
+                width="14"
+                height="14"
+                rx="2"
+                stroke="currentColor"
+                stroke-width="1.4"
+              />
+              <path
+                d="M5 9L7.5 11.5L13 6"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span>Tasks</span>
+          </button>
+          <button
+            class="rail-btn"
+            data-view="focus"
+            onclick="Nav.go('focus', this)"
+            title="Focus"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle
+                cx="9"
+                cy="9"
+                r="7"
+                stroke="currentColor"
+                stroke-width="1.4"
+              />
+              <path
+                d="M9 5V9L12 11"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linecap="round"
+              />
+            </svg>
+            <span>Focus</span>
+          </button>
+          <button
+            class="rail-btn"
+            data-view="learn"
+            onclick="Nav.go('learn', this)"
+            title="Learning"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path
+                d="M2 4H16M2 9H12M2 14H9"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linecap="round"
+              />
+            </svg>
+            <span>Learn</span>
+          </button>
+          <button
+            class="rail-btn"
+            data-view="archive"
+            onclick="Nav.go('archive', this)"
+            title="Archive"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect
+                x="2"
+                y="2"
+                width="14"
+                height="4"
+                rx="1"
+                stroke="currentColor"
+                stroke-width="1.4"
+              />
+              <path
+                d="M2 6V15C2 15.55 2.45 16 3 16H15C15.55 16 16 15.55 16 15V6"
+                stroke="currentColor"
+                stroke-width="1.4"
+              />
+              <path
+                d="M7 10H11"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linecap="round"
+              />
+            </svg>
+            <span>Archive</span>
+          </button>
+        </div>
+        <button
+          class="rail-btn rail-settings"
+          onclick="Settings.open()"
+          title="Settings"
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <circle
+              cx="9"
+              cy="9"
+              r="2.5"
+              stroke="currentColor"
+              stroke-width="1.4"
+            />
+            <path
+              d="M9 2V3.5M9 14.5V16M2 9H3.5M14.5 9H16M4.1 4.1L5.2 5.2M12.8 12.8L13.9 13.9M13.9 4.1L12.8 5.2M5.2 12.8L4.1 13.9"
+              stroke="currentColor"
+              stroke-width="1.4"
+              stroke-linecap="round"
+            />
+          </svg>
+          <span>Settings</span>
+        </button>
+      </nav>
 
-  <!-- Animated background layers -->
-  <div class="bg-layer" id="bg-layer"></div>
-  <div class="bg-noise"></div>
-  <div class="bg-orbs">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
-  </div>
+      <!-- ── Main Canvas ────────────────────────────── -->
+      <main class="canvas">
+        <!-- Top: Greeting + Pulse + Quick Capture -->
+        <div class="canvas-top">
+          <div class="top-left">
+            <div class="greeting-line">
+              <span class="greeting-text" id="greeting">Good morning.</span>
+              <span class="greeting-date" id="greeting-date"></span>
+            </div>
+            <div class="next-up-bar" id="next-up-bar">
+              <span class="next-up-label">Next up</span>
+              <span class="next-up-task" id="next-up-task"
+                >Nothing scheduled — add a task below.</span
+              >
+            </div>
+          </div>
+          <div class="pulse-row">
+            <div class="pulse-card">
+              <div class="pulse-val" id="pulse-tasks">0</div>
+              <div class="pulse-label">Tasks done</div>
+            </div>
+            <div class="pulse-card">
+              <div class="pulse-val" id="pulse-dw">
+                <span id="dw-display">0:00</span>
+              </div>
+              <div class="pulse-label">Deep work hrs</div>
+            </div>
+            <div class="pulse-card">
+              <div class="pulse-val" id="pulse-streak">0</div>
+              <div class="pulse-label">Day streak</div>
+            </div>
+          </div>
+        </div>
 
-  <!-- ── Top Bar ─────────────────────────────────────────── -->
-  <header class="topbar glass-bar">
-    <div class="topbar-left">
-      <span class="logo">◈ DayDeck</span>
+        <!-- Quick Capture Bar -->
+        <div class="capture-bar">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle
+              cx="8"
+              cy="8"
+              r="6"
+              stroke="currentColor"
+              stroke-width="1.3"
+            />
+            <path
+              d="M8 5V8L10 10"
+              stroke="currentColor"
+              stroke-width="1.3"
+              stroke-linecap="round"
+            />
+          </svg>
+          <input
+            type="text"
+            id="capture-input"
+            class="capture-input"
+            placeholder="Quick capture — type anything and press Enter. Try: 'Call dentist Friday 3pm' or 'Read: article about AI'"
+          />
+          <kbd>↵</kbd>
+        </div>
+
+        <!-- AI Brief -->
+        <div class="brief-strip" id="brief-strip">
+          <span class="brief-star">✦</span>
+          <span id="brief-text" class="brief-text"
+            >Loading your daily brief…</span
+          >
+          <button class="brief-refresh" onclick="Brief.fetch()" title="Refresh">
+            ↺
+          </button>
+        </div>
+
+        <!-- ── View: HOME ─────────────────────────────── -->
+        <div class="view active" id="view-home">
+          <div class="two-col">
+            <!-- LEFT: Productivity -->
+            <div class="col col-productivity">
+              <div class="col-header">
+                <span class="col-label">Productivity</span>
+                <span class="col-sub">Output</span>
+              </div>
+
+              <!-- Daily Checklist -->
+              <div class="card" id="card-todo">
+                <div class="card-hdr">
+                  <span class="card-title">Daily Checklist</span>
+                  <span class="card-meta" id="todo-meta">0 left</span>
+                </div>
+                <div class="todo-list" id="todo-list"></div>
+                <div class="todo-add-row">
+                  <input
+                    type="text"
+                    id="todo-input"
+                    class="todo-inp"
+                    placeholder="Add item…"
+                  />
+                  <button class="add-btn" onclick="Todo.add()">+</button>
+                </div>
+              </div>
+
+              <!-- Deep Work Timer -->
+              <div class="card card-timer" id="card-timer">
+                <div class="card-hdr">
+                  <span class="card-title">Deep Work</span>
+                  <span class="card-meta" id="timer-goal-label"></span>
+                </div>
+                <div class="timer-display" id="timer-display">00:00</div>
+                <div class="timer-progress-wrap">
+                  <div class="timer-progress-bar" id="timer-progress"></div>
+                </div>
+                <div class="timer-controls">
+                  <button
+                    class="timer-btn"
+                    id="timer-start-btn"
+                    onclick="Timer.toggle()"
+                  >
+                    Start
+                  </button>
+                  <button
+                    class="timer-btn timer-btn-ghost"
+                    onclick="Timer.reset()"
+                  >
+                    Reset
+                  </button>
+                </div>
+                <div class="timer-session-label" id="timer-session">
+                  Session 1
+                </div>
+              </div>
+
+              <!-- Habits -->
+              <div class="card" id="card-habits">
+                <div class="card-hdr">
+                  <span class="card-title">Habit Time</span>
+                  <span class="card-meta" id="habit-meta"></span>
+                </div>
+                <div class="habit-grid" id="habit-grid"></div>
+              </div>
+
+              <!-- Win the Day -->
+              <div class="card card-win" id="card-win">
+                <div class="card-hdr">
+                  <span class="card-title">Win the Day</span>
+                  <button class="icon-edit" onclick="Win.edit()" title="Edit">
+                    ✎
+                  </button>
+                </div>
+                <div class="win-text" id="win-text">
+                  What's the one thing that would make today a win?
+                </div>
+                <div class="win-progress-wrap hidden" id="win-progress-wrap">
+                  <div class="win-progress-bar" id="win-progress-bar"></div>
+                  <span class="win-progress-label" id="win-progress-label"
+                    >0%</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT: Learning -->
+            <div class="col col-learning">
+              <div class="col-header">
+                <span class="col-label">Learning</span>
+                <span class="col-sub">Input</span>
+              </div>
+
+              <!-- News Feed -->
+              <div class="card card-news" id="card-news">
+                <div class="card-hdr">
+                  <span class="card-title">News Feed</span>
+                  <button
+                    class="icon-action"
+                    onclick="NewsWidget.refresh()"
+                    title="Refresh"
+                  >
+                    ↺
+                  </button>
+                </div>
+                <div class="news-topic-tag" id="news-topic-tag"></div>
+                <div class="news-list" id="news-list">
+                  <p class="empty-msg">Loading headlines…</p>
+                </div>
+              </div>
+
+              <!-- Aha Moments -->
+              <div class="card card-aha" id="card-aha">
+                <div class="card-hdr">
+                  <span class="card-title">Aha Moments</span>
+                  <button
+                    class="icon-action"
+                    onclick="Aha.add()"
+                    title="Add insight"
+                  >
+                    +
+                  </button>
+                </div>
+                <div class="aha-list" id="aha-list"></div>
+                <div class="aha-add-row hidden" id="aha-add-row">
+                  <textarea
+                    id="aha-input"
+                    class="aha-inp"
+                    placeholder="Capture an insight…"
+                    rows="2"
+                  ></textarea>
+                  <button class="btn-sm" onclick="Aha.save()">Save</button>
+                </div>
+              </div>
+
+              <!-- Read Later -->
+              <div class="card card-read" id="card-read">
+                <div class="card-hdr">
+                  <span class="card-title">Read Later</span>
+                  <button class="icon-action" onclick="ReadLater.addPrompt()">
+                    +
+                  </button>
+                </div>
+                <div class="read-list" id="read-list"></div>
+              </div>
+
+              <!-- Sports + Weather row -->
+              <div class="mini-row">
+                <div class="card card-mini card-sports">
+                  <div class="card-hdr">
+                    <span class="card-title" id="sports-title">Sports</span>
+                    <button class="icon-action" onclick="Sports.refresh()">
+                      ↺
+                    </button>
+                  </div>
+                  <div id="sports-content">
+                    <p class="empty-msg">Loading…</p>
+                  </div>
+                </div>
+                <div class="card card-mini card-weather">
+                  <div class="card-hdr">
+                    <span class="card-title">Weather</span>
+                  </div>
+                  <div class="wx-body">
+                    <span class="wx-icon" id="wx-icon">⛅</span>
+                    <span class="wx-temp" id="wx-temp">—°</span>
+                  </div>
+                  <div class="wx-desc" id="wx-desc">—</div>
+                  <div class="wx-loc" id="wx-loc">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- /view-home -->
+
+        <!-- ── View: TASKS (full task manager) ──────── -->
+        <div class="view hidden" id="view-tasks">
+          <div class="view-header">
+            <h2 class="view-title">All Tasks</h2>
+            <div class="task-filters">
+              <button
+                class="filter-btn active"
+                data-filter="all"
+                onclick="TaskView.filter('all', this)"
+              >
+                All
+              </button>
+              <button
+                class="filter-btn"
+                data-filter="active"
+                onclick="TaskView.filter('active', this)"
+              >
+                Active
+              </button>
+              <button
+                class="filter-btn"
+                data-filter="done"
+                onclick="TaskView.filter('done', this)"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+          <div class="task-full-list" id="task-full-list"></div>
+        </div>
+
+        <!-- ── View: FOCUS (deep work timer fullscreen) -->
+        <div class="view hidden" id="view-focus">
+          <div class="focus-center">
+            <div class="focus-session-badge" id="focus-session-badge">
+              Session 1
+            </div>
+            <div class="focus-timer" id="focus-timer">00:00</div>
+            <div class="focus-label" id="focus-label">Ready to focus</div>
+            <div class="focus-progress-wrap">
+              <div class="focus-progress-bar" id="focus-progress-bar"></div>
+            </div>
+            <div class="focus-controls">
+              <button
+                class="focus-btn"
+                id="focus-start-btn"
+                onclick="Timer.toggle()"
+              >
+                Start Session
+              </button>
+              <button class="focus-btn focus-btn-ghost" onclick="Timer.reset()">
+                Reset
+              </button>
+            </div>
+            <div class="focus-goal-row">
+              <span>Daily goal:</span>
+              <span id="focus-goal-display"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── View: LEARN ───────────────────────────── -->
+        <div class="view hidden" id="view-learn">
+          <div class="view-header">
+            <h2 class="view-title">Learning Hub</h2>
+          </div>
+          <div class="two-col">
+            <div class="col">
+              <div class="card">
+                <div class="card-hdr">
+                  <span class="card-title">News Feed</span
+                  ><button class="icon-action" onclick="NewsWidget.refresh()">
+                    ↺
+                  </button>
+                </div>
+                <div class="news-list" id="news-list-full">
+                  <p class="empty-msg">Loading…</p>
+                </div>
+              </div>
+              <div class="card card-aha">
+                <div class="card-hdr">
+                  <span class="card-title">Aha Moments</span
+                  ><button class="icon-action" onclick="Aha.add()">+</button>
+                </div>
+                <div class="aha-list" id="aha-list-full"></div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card">
+                <div class="card-hdr">
+                  <span class="card-title">Read Later Queue</span
+                  ><button class="icon-action" onclick="ReadLater.addPrompt()">
+                    +
+                  </button>
+                </div>
+                <div class="read-list" id="read-list-full"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── View: ARCHIVE ─────────────────────────── -->
+        <div class="view hidden" id="view-archive">
+          <div class="view-header"><h2 class="view-title">Archive</h2></div>
+          <div class="card">
+            <div class="card-hdr">
+              <span class="card-title">Completed tasks</span>
+            </div>
+            <div id="archive-list"></div>
+          </div>
+        </div>
+      </main>
     </div>
-    <div class="topbar-center" id="greeting"></div>
-    <div class="topbar-right">
-      <button class="tb-btn" id="edit-btn" onclick="Editor.toggle()" title="Edit layout">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11 2L14 5L5 14H2V11L11 2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
-        <span id="edit-label">Edit</span>
-      </button>
-      <button class="tb-btn" id="focus-btn" onclick="App.focusMode.toggle()" title="Focus mode">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="10" y="2" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="2" y="10" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="10" y="10" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.4"/></svg>
-      </button>
-      <button class="tb-btn" onclick="Settings.open()" title="Settings">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M8 1.5V3M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M12.6 3.4l-1.1 1.1M4.5 11.5l-1.1 1.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-      </button>
-    </div>
-  </header>
+    <!-- /app -->
 
-  <!-- ── AI Brief ────────────────────────────────────────── -->
-  <div class="brief-bar glass-bar" id="brief-bar">
-    <span class="brief-star">✦</span>
-    <span class="brief-text" id="brief-text"><span class="shimmer-text">Generating your daily brief…</span></span>
-    <button class="brief-refresh" onclick="App.brief.fetch()" title="Refresh">↺</button>
-  </div>
-
-  <!-- ── Edit Mode Toolbar ───────────────────────────────── -->
-  <div class="edit-toolbar hidden" id="edit-toolbar">
-    <span class="edit-toolbar-label">Edit Mode</span>
-    <div class="edit-toolbar-actions">
-      <button class="et-btn" onclick="Editor.addWidget()">+ Add widget</button>
-      <button class="et-btn et-btn-done" onclick="Editor.toggle()">Done</button>
-    </div>
-  </div>
-
-  <!-- ── Widget Canvas ───────────────────────────────────── -->
-  <main class="canvas" id="canvas">
-    <!-- Widgets injected by JS -->
-  </main>
-
-</div><!-- /app -->
-
-
-<!-- ═══════════════════════════════════════════════════════════
-     WIDGET EDITOR PANEL (slides in when widget clicked in edit mode)
-═══════════════════════════════════════════════════════════ -->
-<div class="wpanel hidden" id="wpanel">
-  <div class="wpanel-inner">
-    <div class="wpanel-header">
-      <span class="wpanel-title" id="wpanel-title">Widget Settings</span>
-      <button class="icon-x" onclick="Editor.closePanel()">✕</button>
-    </div>
-
-    <!-- Size -->
-    <div class="wpanel-section">
-      <div class="wpanel-label">Size</div>
-      <div class="size-grid" id="size-grid">
-        <button class="size-btn" data-cols="1" data-rows="1" onclick="Editor.setSize(1,1,this)">1×1</button>
-        <button class="size-btn" data-cols="2" data-rows="1" onclick="Editor.setSize(2,1,this)">2×1</button>
-        <button class="size-btn" data-cols="3" data-rows="1" onclick="Editor.setSize(3,1,this)">3×1</button>
-        <button class="size-btn" data-cols="1" data-rows="2" onclick="Editor.setSize(1,2,this)">1×2</button>
-        <button class="size-btn" data-cols="2" data-rows="2" onclick="Editor.setSize(2,2,this)">2×2</button>
-        <button class="size-btn" data-cols="3" data-rows="2" onclick="Editor.setSize(3,2,this)">3×2</button>
-      </div>
-    </div>
-
-    <!-- Font -->
-    <div class="wpanel-section">
-      <div class="wpanel-label">Font</div>
-      <div class="font-list" id="font-list">
-        <button class="font-btn" data-font="cabinet" onclick="Editor.setFont('cabinet',this)" style="font-family:'Cabinet Grotesk'">Cabinet</button>
-        <button class="font-btn" data-font="syne" onclick="Editor.setFont('syne',this)" style="font-family:'Syne'">Syne</button>
-        <button class="font-btn" data-font="fraunces" onclick="Editor.setFont('fraunces',this)" style="font-family:'Fraunces'">Fraunces</button>
-        <button class="font-btn" data-font="mono" onclick="Editor.setFont('mono',this)" style="font-family:'DM Mono'">DM Mono</button>
-        <button class="font-btn" data-font="system" onclick="Editor.setFont('system',this)">System</button>
-      </div>
-    </div>
-
-    <!-- Card style -->
-    <div class="wpanel-section">
-      <div class="wpanel-label">Card style</div>
-      <div class="style-row">
-        <button class="style-btn" data-style="glass" onclick="Editor.setStyle('glass',this)">Glass</button>
-        <button class="style-btn" data-style="solid" onclick="Editor.setStyle('solid',this)">Solid</button>
-        <button class="style-btn" data-style="outline" onclick="Editor.setStyle('outline',this)">Outline</button>
-        <button class="style-btn" data-style="ghost" onclick="Editor.setStyle('ghost',this)">Ghost</button>
-      </div>
-    </div>
-
-    <!-- Opacity -->
-    <div class="wpanel-section">
-      <div class="wpanel-label">Opacity <span id="opacity-val">80%</span></div>
-      <input type="range" min="10" max="100" value="80" id="opacity-slider" oninput="Editor.setOpacity(this.value)" />
-    </div>
-
-    <!-- Accent color override -->
-    <div class="wpanel-section">
-      <div class="wpanel-label">Card tint</div>
-      <div class="tint-row">
-        <button class="tint-dot" data-tint="none"    onclick="Editor.setTint('none',this)"    style="background:rgba(255,255,255,0.1)" title="None">◯</button>
-        <button class="tint-dot" data-tint="violet"  onclick="Editor.setTint('violet',this)"  style="background:#7c6ff7"></button>
-        <button class="tint-dot" data-tint="cyan"    onclick="Editor.setTint('cyan',this)"    style="background:#22d3ee"></button>
-        <button class="tint-dot" data-tint="rose"    onclick="Editor.setTint('rose',this)"    style="background:#fb7185"></button>
-        <button class="tint-dot" data-tint="emerald" onclick="Editor.setTint('emerald',this)" style="background:#34d399"></button>
-        <button class="tint-dot" data-tint="amber"   onclick="Editor.setTint('amber',this)"   style="background:#fbbf24"></button>
-      </div>
-    </div>
-
-    <!-- Border radius -->
-    <div class="wpanel-section">
-      <div class="wpanel-label">Corner radius <span id="radius-val">16px</span></div>
-      <input type="range" min="0" max="32" value="16" id="radius-slider" oninput="Editor.setRadius(this.value)" />
-    </div>
-
-    <!-- Remove widget -->
-    <div class="wpanel-section">
-      <button class="btn-remove" onclick="Editor.removeWidget()">Remove widget</button>
-    </div>
-  </div>
-</div>
-<div class="wpanel-backdrop hidden" id="wpanel-backdrop" onclick="Editor.closePanel()"></div>
-
-
-<!-- ═══════════════════════════════════════════════════════════
+    <!-- ═══════════════════════════════════════════════
      SETTINGS PANEL
-═══════════════════════════════════════════════════════════ -->
-<div class="settings-panel hidden" id="settings-panel">
-  <div class="settings-inner">
-    <div class="settings-hdr">
-      <h2>Settings</h2>
-      <button class="icon-x" onclick="Settings.close()">✕</button>
-    </div>
-
-    <section class="s-section">
-      <h3>Profile</h3>
-      <label class="s-field"><span>Name</span><input type="text" id="s-name"/></label>
-      <label class="s-field"><span>City</span><input type="text" id="s-city"/></label>
-      <label class="s-field"><span>Sports team</span><input type="text" id="s-team"/></label>
-      <label class="s-field"><span>News topics</span><input type="text" id="s-topics"/></label>
-    </section>
-
-    <section class="s-section">
-      <h3>API Keys <span class="s-hint-inline">(stored locally only)</span></h3>
-      <p class="s-hint">
-        Weather and news load automatically — no key needed.<br>
-        Add an OpenAI key to enable the AI daily brief.
-        <a href="https://platform.openai.com" target="_blank">Get one free →</a>
-      </p>
-      <label class="s-field"><span>OpenAI (for AI brief)</span><input type="password" id="s-openai" placeholder="sk-…"/></label>
-    </section>
-
-    <section class="s-section">
-      <h3>Background</h3>
-      <div class="s-bg-grid">
-        <button class="s-bg-btn" data-bg="aurora"  onclick="Settings.setBg('aurora',this)"  style="background:linear-gradient(135deg,#0f0c29,#302b63,#24243e)">Aurora</button>
-        <button class="s-bg-btn" data-bg="ocean"   onclick="Settings.setBg('ocean',this)"   style="background:linear-gradient(135deg,#0575e6,#021b79)">Ocean</button>
-        <button class="s-bg-btn" data-bg="forest"  onclick="Settings.setBg('forest',this)"  style="background:linear-gradient(135deg,#134e5e,#71b280)">Forest</button>
-        <button class="s-bg-btn" data-bg="ember"   onclick="Settings.setBg('ember',this)"   style="background:linear-gradient(135deg,#232526,#414345)">Carbon</button>
-        <button class="s-bg-btn" data-bg="rose"    onclick="Settings.setBg('rose',this)"    style="background:linear-gradient(135deg,#f953c6,#b91d73)">Rose</button>
-        <button class="s-bg-btn" data-bg="light"   onclick="Settings.setBg('light',this)"   style="background:linear-gradient(135deg,#e0eafc,#cfdef3);color:#333">Cloud</button>
+═══════════════════════════════════════════════ -->
+    <div class="settings-overlay hidden" id="settings-overlay">
+      <div class="settings-panel">
+        <div class="settings-hdr">
+          <h2>Settings</h2>
+          <button class="icon-x" onclick="Settings.close()">✕</button>
+        </div>
+        <section class="s-sec">
+          <h3>Profile</h3>
+          <label class="s-field"
+            ><span>Name</span><input type="text" id="s-name"
+          /></label>
+          <label class="s-field"
+            ><span>City</span><input type="text" id="s-city"
+          /></label>
+          <label class="s-field"
+            ><span>Sports team</span><input type="text" id="s-team"
+          /></label>
+          <label class="s-field"
+            ><span>Topics</span><input type="text" id="s-topics"
+          /></label>
+          <label class="s-field"
+            ><span>Deep work goal (hrs)</span
+            ><input type="number" id="s-dwgoal" min="1" max="12"
+          /></label>
+        </section>
+        <section class="s-sec">
+          <h3>Accent color</h3>
+          <div class="s-accents">
+            <button
+              class="ob-acc"
+              data-accent="clay"
+              onclick="Settings.setAccent('clay', this)"
+              style="background: #c17a5c"
+            >
+              Clay
+            </button>
+            <button
+              class="ob-acc"
+              data-accent="forest"
+              onclick="Settings.setAccent('forest', this)"
+              style="background: #4a7c59"
+            >
+              Forest
+            </button>
+            <button
+              class="ob-acc"
+              data-accent="ink"
+              onclick="Settings.setAccent('ink', this)"
+              style="background: #2d3a4a"
+            >
+              Ink
+            </button>
+            <button
+              class="ob-acc"
+              data-accent="ochre"
+              onclick="Settings.setAccent('ochre', this)"
+              style="background: #b08a3e"
+            >
+              Ochre
+            </button>
+            <button
+              class="ob-acc"
+              data-accent="plum"
+              onclick="Settings.setAccent('plum', this)"
+              style="background: #6b4e7d"
+            >
+              Plum
+            </button>
+          </div>
+        </section>
+        <section class="s-sec">
+          <h3>AI Brief <span class="s-note">(optional)</span></h3>
+          <p class="s-hint">
+            Add an OpenAI key to enable the AI daily brief.
+            <a href="https://platform.openai.com" target="_blank"
+              >Get one free →</a
+            >
+          </p>
+          <label class="s-field"
+            ><span>OpenAI key</span
+            ><input type="password" id="s-openai" placeholder="sk-…"
+          /></label>
+        </section>
+        <div class="s-footer">
+          <button class="btn-primary" onclick="Settings.save()">
+            Save changes
+          </button>
+          <button class="btn-danger" onclick="Settings.reset()">
+            Reset all data
+          </button>
+        </div>
       </div>
-    </section>
-
-    <section class="s-section">
-      <h3>Accent color</h3>
-      <div class="s-accent-row">
-        <button class="accent-dot" data-accent="violet"  onclick="Settings.setAccent('violet',this)"  style="background:#7c6ff7"></button>
-        <button class="accent-dot" data-accent="cyan"    onclick="Settings.setAccent('cyan',this)"    style="background:#22d3ee"></button>
-        <button class="accent-dot" data-accent="rose"    onclick="Settings.setAccent('rose',this)"    style="background:#fb7185"></button>
-        <button class="accent-dot" data-accent="emerald" onclick="Settings.setAccent('emerald',this)" style="background:#34d399"></button>
-        <button class="accent-dot" data-accent="amber"   onclick="Settings.setAccent('amber',this)"   style="background:#fbbf24"></button>
-        <button class="accent-dot" data-accent="white"   onclick="Settings.setAccent('white',this)"   style="background:#fff;border:1px solid rgba(255,255,255,0.4)"></button>
-      </div>
-    </section>
-
-    <section class="s-section">
-      <h3>Widgets</h3>
-      <div id="s-widget-toggles"></div>
-    </section>
-
-    <div class="s-footer">
-      <button class="btn-primary" onclick="Settings.save()">Save changes</button>
-      <button class="btn-danger"  onclick="Settings.reset()">Reset all data</button>
     </div>
-  </div>
-</div>
-<div class="settings-backdrop hidden" id="settings-backdrop" onclick="Settings.close()"></div>
 
-
-<!-- ═══════════════════════════════════════════════════════════
-     ADD WIDGET MODAL
-═══════════════════════════════════════════════════════════ -->
-<div class="modal hidden" id="add-modal">
-  <div class="modal-card">
-    <div class="modal-hdr">
-      <h3>Add a widget</h3>
-      <button class="icon-x" onclick="Editor.closeAdd()">✕</button>
-    </div>
-    <div class="add-widget-list" id="add-widget-list">
-      <!-- Populated by JS -->
-    </div>
-  </div>
-</div>
-<div class="modal-backdrop hidden" id="modal-backdrop" onclick="Editor.closeAdd()"></div>
-
-<script src="js/main.js"></script>
-</body>
+    <script src="js/main.js"></script>
+  </body>
 </html>
