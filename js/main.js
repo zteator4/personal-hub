@@ -192,7 +192,8 @@ const Capture = {
 ═══════════════════════════════════════════════════════════ */
 const Todo = {
   render() {
-    const el = $('todo-list'); if(!el) return;
+    const el = $('todo-list');
+    if(!el) return;
     el.innerHTML = !S.todos.length
       ? `<p class="empty-msg">No tasks yet — use the capture bar above.</p>`
       : S.todos.slice(0,8).map((t,i)=>`
@@ -673,32 +674,28 @@ const Settings = {
    LAUNCH
 ═══════════════════════════════════════════════════════════ */
 function launch() {
-  $('onboarding').classList.add('hidden');
-  $('app').classList.remove('hidden');
-  document.documentElement.dataset.accent = S.accent||'clay';
-
-  updateGreeting();
-  updatePulse();
-  Todo.render();
-  Todo.init?.();
-  Habits.render();
-  Win.render();
-  Timer.init();
-  Aha.render();
-  ReadLater.render();
-  Capture.init();
-  Weather.init();
-  Sports.refresh();
-  NewsWidget.refresh();
-  Brief.fetch();
-
-  /* Todo Enter key */
-  const ti=$('todo-input');
-  if(ti) ti.addEventListener('keydown',e=>{ if(e.key==='Enter') Todo.add(); });
-
-  /* Aha Enter (ctrl+enter saves) */
-  const ai=$('aha-input');
-  if(ai) ai.addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)) Aha.save(); });
+  const ob=document.getElementById("onboarding"); if(ob) ob.classList.add("hidden");
+  const app=document.getElementById("app"); if(app) app.classList.remove("hidden");
+  document.documentElement.dataset.accent = S.accent||"clay";
+  requestAnimationFrame(() => {
+    updateGreeting();
+    updatePulse();
+    Todo.render();
+    Habits.render();
+    Win.render();
+    Timer.init();
+    Aha.render();
+    ReadLater.render();
+    Capture.init();
+    Weather.init();
+    Sports.refresh();
+    NewsWidget.refresh();
+    Brief.fetch();
+    const ti=document.getElementById("todo-input");
+    if(ti) ti.addEventListener("keydown",e=>{ if(e.key==="Enter") Todo.add(); });
+    const ai=document.getElementById("aha-input");
+    if(ai) ai.addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)) Aha.save(); });
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════
