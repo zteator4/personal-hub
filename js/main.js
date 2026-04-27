@@ -1,896 +1,1057 @@
 /* ============================================================
-   DayDeck — main.js
-   Core application logic. Organized as a single App namespace
-   with sub-modules for each feature area.
+   DayDeck v2 — main.js
+   Full app: state, widgets, drag-and-drop editor, API integrations
    ============================================================ */
-
 'use strict';
 
-/* ── Default state (used when no localStorage data exists) ─── */
+/* ── Constants ──────────────────────────────────────────────── */
+const STORAGE_KEY = 'daydeck_v2';
+
+const WEATHER_ICONS = {
+  '01d':'☀️','01n':'🌙','02d':'⛅','02n':'⛅','03d':'☁️','03n':'☁️',
+  '04d':'☁️','04n':'☁️','09d':'🌧️','09n':'🌧️','10d':'🌦️','10n':'🌦️',
+  '11d':'⛈️','11n':'⛈️','13d':'❄️','13n':'❄️','50d':'🌫️','50n':'🌫️'
+};
+
+const BG_GRADIENTS = {
+  aurora: 'linear-gradient(135deg,#0f0c29,#302b63,#24243e)',
+  ocean:  'linear-gradient(135deg,#0575e6,#021b79)',
+  forest: 'linear-gradient(135deg,#134e5e,#71b280)',
+  ember:  'linear-gradient(135deg,#232526,#414345)',
+  rose:   'linear-gradient(135deg,#f953c6,#b91d73)',
+  light:  'linear-gradient(135deg,#e0eafc,#cfdef3)'
+};
+
+const WIDGET_META = {
+  clock:     { label:'Clock',      icon:'◷', defaultCols:2, defaultRows:1 },
+  weather:   { label:'Weather',    icon:'☁', defaultCols:2, defaultRows:2 },
+  todo:      { label:'To-Do',      icon:'✓', defaultCols:2, defaultRows:2 },
+  news:      { label:'News',       icon:'⊞', defaultCols:2, defaultRows:2 },
+  sports:    { label:'Sports',     icon:'⚽', defaultCols:2, defaultRows:1 },
+  quote:     { label:'Quote',      icon:'"', defaultCols:2, defaultRows:1 },
+  market:    { label:'Markets',    icon:'↗', defaultCols:2, defaultRows:2 },
+  habit:     { label:'Habits',     icon:'◉', defaultCols:2, defaultRows:2 },
+  countdown: { label:'Countdown',  icon:'⧗', defaultCols:1, defaultRows:1 },
+  links:     { label:'Links',      icon:'⊕', defaultCols:2, defaultRows:1 },
+};
+
 const DEFAULTS = {
-  name: '',
-  city: 'Boston',
-  team: '',
-  topics: 'technology,science,business',
-  theme: 'dark',
-  accent: 'blue',
-  widgets: {
-    clock: true, weather: true, todo: true,
-    news: true, sports: true, quote: true,
-    market: false, habit: false, countdown: false, links: false
-  },
-  apiKeys: { openai: '', weather: '', news: '' },
-  todos: [],
-  habits: [],
-  countdowns: [],
-  links: [],
+  name:'', city:'Boston', team:'', topics:'technology,sports,finance',
+  theme:'dark', accent:'violet', bg:'aurora',
+  apiKeys:{ weather:'', gnews:'', openai:'' },
+  todos:[], habits:[], countdowns:[], links:[],
+  widgets:[],  /* ordered array of widget configs */
   onboardingDone: false
 };
 
-/* ── Widget metadata for labels ─────────────────────────────── */
-const WIDGET_LABELS = {
-  clock: 'Clock', weather: 'Weather', todo: 'To-Do',
-  news: 'News', sports: 'Sports', quote: 'Quote',
-  market: 'Markets', habit: 'Habits', countdown: 'Countdowns', links: 'Quick Links'
-};
+/* ── State ──────────────────────────────────────────────────── */
+let STATE = {};
 
-/* ── Weather icon map (OpenWeatherMap condition codes) ──────── */
-const WEATHER_ICONS = {
-  '01d':'☀️','01n':'🌙','02d':'⛅','02n':'⛅',
-  '03d':'☁️','03n':'☁️','04d':'☁️','04n':'☁️',
-  '09d':'🌧️','09n':'🌧️','10d':'🌦️','10n':'🌦️',
-  '11d':'⛈️','11n':'⛈️','13d':'❄️','13n':'❄️',
-  '50d':'🌫️','50n':'🌫️'
-};
+/* ── Helpers ────────────────────────────────────────────────── */
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); } catch(e) {} }
+function deepMerge(def, saved) {
+  const out = {...def};
+  for (const k of Object.keys(saved||{})) {
+    if (k in out && typeof out[k]==='object' && !Array.isArray(out[k])) {
+      out[k] = deepMerge(out[k], saved[k]);
+    } else { out[k] = saved[k]; }
+  }
+  return out;
+}
 
-/* ============================================================
-   App — Main namespace
-   ============================================================ */
-const App = {
+/* ── Default widget list ────────────────────────────────────── */
+function defaultWidgets(selectedMap) {
+  const order = ['clock','weather','todo','news','sports','quote','market','habit','countdown','links'];
+  return order
+    .filter(id => selectedMap[id])
+    .map(id => ({
+      id,
+      cols: WIDGET_META[id].defaultCols,
+      rows: WIDGET_META[id].defaultRows,
+      font:'cabinet', style:'glass', opacity:80, tint:'none', radius:20
+    }));
+}
 
-  /* ── State ─────────────────────────────────────────────── */
-  state: {},
 
-  /* ── Init ──────────────────────────────────────────────── */
-  init() {
-    this.state = this.storage.load();
-
-    if (!this.state.onboardingDone) {
-      this.onboarding.show();
-    } else {
-      this.launch();
-    }
+/* ═══════════════════════════════════════════════════════════
+   ONBOARDING
+═══════════════════════════════════════════════════════════ */
+const OB = {
+  step: 1,
+  next() {
+    if (this.step < 5) { this.step++; this.showStep(this.step); }
   },
+  prev() {
+    if (this.step > 1) { this.step--; this.showStep(this.step); }
+  },
+  showStep(n) {
+    document.querySelectorAll('.ob-step').forEach(el => el.classList.remove('active'));
+    document.querySelector(`.ob-step[data-step="${n}"]`).classList.add('active');
+    document.querySelectorAll('.ob-dot').forEach((d,i) => d.classList.toggle('active', i===n-1));
+    this.step = n;
+  },
+  setBg(btn) {
+    document.querySelectorAll('.ob-bg-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    STATE.bg = btn.dataset.bg;
+    applyBg();
+  },
+  setAccent(accent, btn) {
+    document.querySelectorAll('.ob-accent-row .accent-dot').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    STATE.accent = accent;
+    document.documentElement.dataset.accent = accent;
+  },
+  finish() {
+    STATE.name   = $('ob-name').value.trim();
+    STATE.city   = $('ob-city').value.trim() || 'Boston';
+    STATE.team   = $('ob-team').value.trim();
+    STATE.topics = $('ob-topics').value.trim() || 'technology';
 
-  launch() {
-    /* Apply theme & accent before revealing the app */
-    this.theme.apply();
-    this.widgets.applyVisibility();
-
-    document.getElementById('onboarding').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
-
-    /* Start all modules */
-    this.clock.start();
-    this.greeting.update();
-    this.weather.init();
-    this.todo.render();
-    this.news.init();
-    this.sports.init();
-    this.quote.fetch();
-    this.market.init();
-    this.habit.render();
-    this.countdown.render();
-    this.countdown.startTick();
-    this.links.render();
-    this.brief.fetch();
-    this.settings.buildToggles();
-
-    /* Wire to-do input Enter key */
-    document.getElementById('todo-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter') App.todo.add();
+    const selected = {};
+    document.querySelectorAll('.ob-wtoggle').forEach(label => {
+      selected[label.dataset.w] = label.querySelector('input').checked;
     });
+
+    STATE.widgets = defaultWidgets(selected);
+    STATE.onboardingDone = true;
+    save();
+    launch();
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   BACKGROUND
+═══════════════════════════════════════════════════════════ */
+function applyBg() {
+  document.body.dataset.bg = STATE.bg || 'aurora';
+  /* Sync orb color to accent */
+  document.documentElement.dataset.accent = STATE.accent || 'violet';
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   CANVAS + WIDGET RENDERING
+═══════════════════════════════════════════════════════════ */
+const Canvas = {
+  render() {
+    const canvas = $('canvas');
+    canvas.innerHTML = '';
+    STATE.widgets.forEach((wc, idx) => {
+      const el = this.buildWidget(wc, idx);
+      canvas.appendChild(el);
+    });
+    /* Load data into each widget */
+    Widgets.initAll();
+    DragDrop.bind();
   },
 
+  buildWidget(wc, idx) {
+    const el = document.createElement('div');
+    el.className  = 'widget';
+    el.dataset.widget = wc.id;
+    el.dataset.idx = idx;
+    el.dataset.wstyle = wc.style || 'glass';
+    if (wc.tint && wc.tint !== 'none') el.dataset.tint = wc.tint;
+    if (wc.font) el.dataset.wfont = wc.font;
 
-  /* ── Storage ────────────────────────────────────────────── */
-  storage: {
-    KEY: 'daydeck_state',
+    /* Grid sizing */
+    el.style.gridColumn = `span ${wc.cols || 2}`;
+    el.style.gridRow    = `span ${wc.rows || 1}`;
+    el.style.borderRadius = `${wc.radius ?? 20}px`;
+    el.style.opacity = (wc.opacity ?? 80) / 100;
 
-    load() {
-      try {
-        const saved = JSON.parse(localStorage.getItem(App.storage.KEY) || 'null');
-        /* Deep merge saved over defaults so new keys always exist */
-        return App.storage.merge(DEFAULTS, saved || {});
-      } catch {
-        return { ...DEFAULTS };
+    el.innerHTML = `
+      <div class="widget-edit-badge">✎</div>
+      <div class="w-inner" id="wi-${wc.id}">
+        ${this.getTemplate(wc.id)}
+      </div>
+    `;
+
+    /* Edit mode click handler */
+    el.addEventListener('click', () => {
+      if ($('canvas').classList.contains('edit-mode')) {
+        Editor.openPanel(idx);
       }
-    },
+    });
 
-    save() {
-      try {
-        localStorage.setItem(App.storage.KEY, JSON.stringify(App.state));
-      } catch (e) {
-        console.warn('DayDeck: could not save state', e);
-      }
-    },
+    return el;
+  },
 
-    /* Recursive merge: defaults <- saved */
-    merge(defaults, saved) {
-      const result = { ...defaults };
-      for (const key of Object.keys(saved)) {
-        if (key in result && typeof result[key] === 'object' && !Array.isArray(result[key])) {
-          result[key] = App.storage.merge(result[key], saved[key] || {});
-        } else {
-          result[key] = saved[key];
-        }
-      }
-      return result;
+  getTemplate(id) {
+    switch(id) {
+      case 'clock': return `
+        <div class="clock-time" id="clock-time">--:--</div>
+        <div class="clock-date" id="clock-date">---</div>`;
+
+      case 'weather': return `
+        <div class="w-hdr">
+          <span class="w-label">Weather</span>
+          <span class="wx-loc" id="wx-loc">--</span>
+        </div>
+        <div class="wx-main">
+          <div class="wx-icon" id="wx-icon">⛅</div>
+          <div class="wx-temp" id="wx-temp">--°</div>
+        </div>
+        <div class="wx-desc" id="wx-desc">--</div>
+        <div class="wx-meta">
+          <span id="wx-hum">Humidity: --%</span>
+          <span id="wx-wind">Wind: -- mph</span>
+        </div>
+        <div class="wx-forecast" id="wx-forecast"></div>`;
+
+      case 'todo': return `
+        <div class="w-hdr">
+          <span class="w-label">Today</span>
+          <span class="todo-count" id="todo-count">0 left</span>
+        </div>
+        <div class="todo-list" id="todo-list"></div>
+        <div class="todo-input-row">
+          <input class="todo-inp" id="todo-input" placeholder="Add a task…" />
+          <button class="todo-add" onclick="Widgets.todo.add()" title="Add">+</button>
+        </div>`;
+
+      case 'news': return `
+        <div class="w-hdr">
+          <span class="w-label">News</span>
+          <button class="w-action" onclick="Widgets.news.refresh()" title="Refresh">↺</button>
+        </div>
+        <div class="news-list" id="news-list">
+          <p class="news-empty">Loading…</p>
+        </div>`;
+
+      case 'sports': return `
+        <div class="w-hdr">
+          <span class="w-label" id="sports-label">Sports</span>
+          <button class="w-action" onclick="Widgets.sports.refresh()">↺</button>
+        </div>
+        <div id="sports-content"><p class="sports-empty">Loading…</p></div>`;
+
+      case 'quote': return `
+        <div class="q-mark">"</div>
+        <div class="q-text" id="q-text">Loading…</div>
+        <div class="q-author" id="q-author">—</div>
+        <button class="q-refresh" onclick="Widgets.quote.fetch()">↺</button>`;
+
+      case 'market': return `
+        <div class="w-hdr">
+          <span class="w-label">Markets</span>
+          <button class="w-action" onclick="Widgets.market.refresh()">↺</button>
+        </div>
+        <div class="mkt-list" id="mkt-list"><p class="news-empty">Loading…</p></div>`;
+
+      case 'habit': return `
+        <div class="w-hdr"><span class="w-label">Habits</span></div>
+        <div class="habit-list" id="habit-list"></div>`;
+
+      case 'countdown': return `
+        <div class="w-hdr">
+          <span class="w-label">Countdown</span>
+          <button class="w-action" onclick="Widgets.countdown.addPrompt()">+</button>
+        </div>
+        <div class="cd-list" id="cd-list"></div>`;
+
+      case 'links': return `
+        <div class="w-hdr">
+          <span class="w-label">Quick Links</span>
+          <button class="w-action" onclick="Widgets.links.addPrompt()">+</button>
+        </div>
+        <div class="links-grid" id="links-grid"></div>`;
+
+      default: return `<div class="w-label">${id}</div>`;
     }
   },
 
+  refreshWidget(id) {
+    const el = document.querySelector(`[data-widget="${id}"]`);
+    if (!el) return;
+    const idx = parseInt(el.dataset.idx);
+    const wc  = STATE.widgets[idx];
+    const inner = el.querySelector('.w-inner');
+    inner.innerHTML = this.getTemplate(id);
+    Widgets.initOne(id);
+  }
+};
 
-  /* ── Onboarding ─────────────────────────────────────────── */
-  onboarding: {
-    currentStep: 1,
-    totalSteps: 5,
 
-    show() {
-      document.getElementById('onboarding').classList.remove('hidden');
-      /* Pre-apply current theme for onboarding */
-      App.theme.apply();
-    },
+/* ═══════════════════════════════════════════════════════════
+   WIDGET DATA MODULES
+═══════════════════════════════════════════════════════════ */
+const Widgets = {
+  initAll() {
+    const ids = STATE.widgets.map(w => w.id);
+    ids.forEach(id => this.initOne(id));
+    /* Start clock ticker */
+    this.clock.start();
+    /* Bind todo Enter key (may be re-rendered, so always re-bind) */
+    const ti = $('todo-input');
+    if (ti) ti.onkeydown = e => { if(e.key==='Enter') this.todo.add(); };
+  },
 
-    showStep(n) {
-      document.querySelectorAll('.ob-step').forEach(el => el.classList.remove('active'));
-      document.querySelector(`.ob-step[data-step="${n}"]`).classList.add('active');
-      document.querySelectorAll('.ob-dot').forEach((dot, i) => {
-        dot.classList.toggle('active', i === n - 1);
-      });
-      this.currentStep = n;
-    },
-
-    next() {
-      if (this.currentStep < this.totalSteps) {
-        this.showStep(this.currentStep + 1);
-      }
-    },
-
-    prev() {
-      if (this.currentStep > 1) {
-        this.showStep(this.currentStep - 1);
-      }
-    },
-
-    finish() {
-      /* Collect all onboarding values */
-      App.state.name   = document.getElementById('ob-name').value.trim();
-      App.state.city   = document.getElementById('ob-city').value.trim() || 'Boston';
-      App.state.team   = document.getElementById('ob-team').value.trim();
-      App.state.topics = document.getElementById('ob-topics').value.trim() || 'technology,sports';
-
-      /* Collect widget selections */
-      document.querySelectorAll('.ob-widget-toggle').forEach(label => {
-        const widget = label.dataset.widget;
-        const checked = label.querySelector('input').checked;
-        App.state.widgets[widget] = checked;
-      });
-
-      App.state.onboardingDone = true;
-      App.storage.save();
-      App.launch();
+  initOne(id) {
+    switch(id) {
+      case 'clock':     break; /* handled by start() */
+      case 'weather':   this.weather.init(); break;
+      case 'todo':      this.todo.render(); break;
+      case 'news':      this.news.init(); break;
+      case 'sports':    this.sports.init(); break;
+      case 'quote':     this.quote.fetch(); break;
+      case 'market':    this.market.init(); break;
+      case 'habit':     this.habit.render(); break;
+      case 'countdown': this.countdown.render(); this.countdown.tick(); break;
+      case 'links':     this.links.render(); break;
     }
   },
 
-
-  /* ── Theme ──────────────────────────────────────────────── */
-  theme: {
-    apply() {
-      document.documentElement.dataset.theme  = App.state.theme;
-      document.documentElement.dataset.accent = App.state.accent;
-
-      /* Sync active states in both onboarding and settings */
-      document.querySelectorAll('.theme-pill').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.theme === App.state.theme);
-      });
-      document.querySelectorAll('.accent-dot').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.accent === App.state.accent);
-      });
-    },
-
-    set(theme, btn) {
-      App.state.theme = theme;
-      App.storage.save();
-      this.apply();
-    },
-
-    setAccent(accent, btn) {
-      App.state.accent = accent;
-      App.storage.save();
-      this.apply();
-    }
-  },
-
-
-  /* ── Widgets visibility ─────────────────────────────────── */
-  widgets: {
-    applyVisibility() {
-      document.querySelectorAll('[data-widget]').forEach(el => {
-        const name = el.dataset.widget;
-        const visible = App.state.widgets[name] !== false;
-        el.classList.toggle('hidden', !visible);
-      });
-    },
-
-    toggle(name, visible) {
-      App.state.widgets[name] = visible;
-      App.storage.save();
-      this.applyVisibility();
-    },
-
-    /* Build the toggle list inside settings panel */
-    buildToggles() {
-      const container = document.getElementById('settings-widget-toggles');
-      container.innerHTML = '';
-      for (const [name, label] of Object.entries(WIDGET_LABELS)) {
-        const enabled = App.state.widgets[name] !== false;
-        const row = document.createElement('div');
-        row.className = 'settings-widget-toggle';
-        row.innerHTML = `
-          <span>${label}</span>
-          <label class="toggle-switch">
-            <input type="checkbox" ${enabled ? 'checked' : ''}
-              onchange="App.widgets.toggle('${name}', this.checked)" />
-            <span class="toggle-slider"></span>
-          </label>
-        `;
-        container.appendChild(row);
-      }
-    }
-  },
-
-
-  /* ── Clock ──────────────────────────────────────────────── */
+  /* ── Clock ─────────────────────────────────────────────── */
   clock: {
-    _timer: null,
-
+    _t: null,
     start() {
+      clearInterval(this._t);
       this.tick();
-      this._timer = setInterval(() => this.tick(), 1000);
+      this._t = setInterval(() => this.tick(), 1000);
     },
-
     tick() {
       const now = new Date();
-      /* Format time as 12-hour with AM/PM */
-      const hours   = now.getHours();
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const ampm    = hours >= 12 ? 'PM' : 'AM';
-      const h12     = ((hours % 12) || 12);
-
-      document.getElementById('clock-time').textContent = `${h12}:${minutes} ${ampm}`;
-
-      /* Format date as "Monday, April 23" */
-      const dateStr = now.toLocaleDateString('en-US', {
-        weekday: 'long', month: 'long', day: 'numeric'
-      });
-      document.getElementById('clock-date').textContent = dateStr;
+      const h   = now.getHours(), m = String(now.getMinutes()).padStart(2,'0');
+      const ampm= h>=12?'PM':'AM', h12 = ((h%12)||12);
+      const tel = $('clock-time'), del = $('clock-date');
+      if (tel) tel.textContent = `${h12}:${m} ${ampm}`;
+      if (del) del.textContent = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
     }
   },
 
-
-  /* ── Greeting ───────────────────────────────────────────── */
-  greeting: {
-    update() {
-      const hour = new Date().getHours();
-      const tod  = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
-      const name = App.state.name ? `, ${App.state.name}` : '';
-      document.getElementById('header-greeting').textContent = `Good ${tod}${name}`;
-    }
-  },
-
-
-  /* ── Weather ────────────────────────────────────────────── */
+  /* ── Weather — Open-Meteo (no API key required) ───────── */
   weather: {
+    /* WMO weather code → emoji + description */
+    WMO: {
+      0:['☀️','Clear sky'], 1:['🌤','Mainly clear'], 2:['⛅','Partly cloudy'], 3:['☁️','Overcast'],
+      45:['🌫️','Foggy'], 48:['🌫️','Icy fog'],
+      51:['🌦','Light drizzle'], 53:['🌦','Drizzle'], 55:['🌧','Heavy drizzle'],
+      61:['🌧','Light rain'], 63:['🌧','Rain'], 65:['🌧','Heavy rain'],
+      71:['❄️','Light snow'], 73:['❄️','Snow'], 75:['❄️','Heavy snow'], 77:['🌨','Snow grains'],
+      80:['🌦','Rain showers'], 81:['🌧','Showers'], 82:['⛈','Violent showers'],
+      85:['🌨','Snow showers'], 86:['🌨','Heavy snow showers'],
+      95:['⛈','Thunderstorm'], 96:['⛈','Thunderstorm w/ hail'], 99:['⛈','Severe thunderstorm'],
+    },
+
     async init() {
-      const key  = App.state.apiKeys.weather;
-      const city = App.state.city || 'Boston';
-
-      if (!key) {
-        this.showDemo(city);
-        return;
-      }
-
+      const city = STATE.city || 'Boston';
       try {
-        /* Current weather */
-        const res = await fetch(
-          `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${key}&units=imperial`
-        );
-        if (!res.ok) throw new Error('Weather API error');
-        const data = await res.json();
+        /* Step 1: geocode city name → lat/lon (Open-Meteo geocoding, free, no key) */
+        const gr = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`);
+        if (!gr.ok) throw 0;
+        const gd = await gr.json();
+        if (!gd.results?.length) throw 0;
+        const { latitude: lat, longitude: lon, name, country_code } = gd.results[0];
 
-        document.getElementById('weather-location').textContent = data.name;
-        document.getElementById('weather-icon').textContent     = WEATHER_ICONS[data.weather[0].icon] || '🌡️';
-        document.getElementById('weather-temp').textContent     = `${Math.round(data.main.temp)}°F`;
-        document.getElementById('weather-desc').textContent     = data.weather[0].description;
-        document.getElementById('weather-humidity').textContent = `Humidity: ${data.main.humidity}%`;
-        document.getElementById('weather-wind').textContent     = `Wind: ${Math.round(data.wind.speed)} mph`;
-
-        /* Forecast */
-        const forecastRes = await fetch(
-          `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${key}&units=imperial&cnt=24`
+        /* Step 2: fetch current + hourly forecast (Open-Meteo, free, no key) */
+        const wr = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+          `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code` +
+          `&daily=weather_code,temperature_2m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=5`
         );
-        if (forecastRes.ok) {
-          const fData = await forecastRes.json();
-          this.renderForecast(fData.list);
-        }
-      } catch (e) {
-        console.warn('Weather fetch failed:', e);
-        this.showDemo(city);
+        if (!wr.ok) throw 0;
+        const wd = await wr.json();
+
+        const cur  = wd.current;
+        const code = cur.weather_code;
+        const [icon, desc] = this.WMO[code] || ['🌡️','Unknown'];
+
+        this.render(
+          `${name}, ${country_code}`,
+          icon,
+          Math.round(cur.temperature_2m),
+          desc,
+          cur.relative_humidity_2m,
+          Math.round(cur.wind_speed_10m)
+        );
+        this.forecast(wd.daily);
+      } catch {
+        /* Fallback: show placeholder with city name */
+        this.render(city, '⛅', '—', 'Weather unavailable', '—', '—');
       }
     },
 
-    renderForecast(list) {
-      /* Show one reading per day (every 8th entry = 24hrs apart) */
-      const days = [];
-      const seen = new Set();
-      for (const item of list) {
-        const day = new Date(item.dt * 1000).toLocaleDateString('en-US', { weekday: 'short' });
-        if (!seen.has(day)) {
-          seen.add(day);
-          days.push({ day, icon: WEATHER_ICONS[item.weather[0].icon] || '🌡️', temp: Math.round(item.main.temp) });
-        }
-        if (days.length >= 4) break;
-      }
-
-      const container = document.getElementById('weather-forecast');
-      container.innerHTML = days.map(d => `
-        <div class="forecast-day">
-          <span class="fd-label">${d.day}</span>
-          <span class="fd-icon">${d.icon}</span>
-          <span class="fd-temp">${d.temp}°</span>
-        </div>
-      `).join('');
+    render(loc, icon, temp, desc, hum, wind) {
+      const set = (id, v) => { const el=$(id); if(el) el.textContent=v; };
+      const tempStr = typeof temp === 'number' ? `${temp}°F` : temp;
+      set('wx-loc', loc); set('wx-icon', icon); set('wx-temp', tempStr);
+      set('wx-desc', desc);
+      set('wx-hum',  hum  !== '—' ? `Humidity: ${hum}%`  : 'Humidity: —');
+      set('wx-wind', wind !== '—' ? `Wind: ${wind} mph`   : 'Wind: —');
     },
 
-    showDemo(city) {
-      /* Placeholder data when no API key is configured */
-      document.getElementById('weather-location').textContent = city;
-      document.getElementById('weather-icon').textContent     = '⛅';
-      document.getElementById('weather-temp').textContent     = '68°F';
-      document.getElementById('weather-desc').textContent     = 'Partly cloudy';
-      document.getElementById('weather-humidity').textContent = 'Humidity: 58%';
-      document.getElementById('weather-wind').textContent     = 'Wind: 12 mph';
-      document.getElementById('weather-forecast').innerHTML   = `
-        <div class="forecast-day"><span class="fd-label">Tue</span><span class="fd-icon">☀️</span><span class="fd-temp">72°</span></div>
-        <div class="forecast-day"><span class="fd-label">Wed</span><span class="fd-icon">🌧️</span><span class="fd-temp">61°</span></div>
-        <div class="forecast-day"><span class="fd-label">Thu</span><span class="fd-icon">⛅</span><span class="fd-temp">66°</span></div>
-        <div class="forecast-day"><span class="fd-label">Fri</span><span class="fd-icon">☀️</span><span class="fd-temp">74°</span></div>
-      `;
+    forecast(daily) {
+      const el = $('wx-forecast'); if(!el) return;
+      /* daily.time is array of date strings; skip index 0 (today) */
+      const days = daily.time.slice(1,5).map((dateStr, i) => {
+        const day  = new Date(dateStr+'T12:00:00').toLocaleDateString('en-US',{weekday:'short'});
+        const code = daily.weather_code[i+1];
+        const temp = Math.round(daily.temperature_2m_max[i+1]);
+        const [icon] = this.WMO[code] || ['🌡️'];
+        return { day, icon, temp };
+      });
+      el.innerHTML = days.map(d =>
+        `<div class="wx-day">
+           <span class="wx-day-label">${d.day}</span>
+           <span class="wx-day-icon">${d.icon}</span>
+           <span class="wx-day-temp">${d.temp}°</span>
+         </div>`
+      ).join('');
     }
   },
 
-
-  /* ── To-Do ──────────────────────────────────────────────── */
+  /* ── To-Do ─────────────────────────────────────────────── */
   todo: {
     render() {
-      const list = document.getElementById('todo-list');
-      const todos = App.state.todos;
-
-      list.innerHTML = todos.length === 0
-        ? `<p style="font-size:0.82rem;color:var(--text-3);padding:0.5rem 0;">No tasks yet — add one below.</p>`
-        : todos.map((t, i) => `
-          <div class="todo-item ${t.done ? 'done' : ''}" onclick="App.todo.toggle(${i})">
-            <div class="todo-checkbox">${t.done ? '✓' : ''}</div>
-            <span class="todo-text">${this.escape(t.text)}</span>
-            <button class="todo-delete" onclick="event.stopPropagation(); App.todo.remove(${i})" title="Delete">✕</button>
-          </div>
-        `).join('');
-
-      const remaining = todos.filter(t => !t.done).length;
-      document.getElementById('todo-count').textContent = `${remaining} left`;
+      const el = $('todo-list'); if(!el) return;
+      const todos = STATE.todos;
+      el.innerHTML = !todos.length
+        ? `<p style="font-size:.78rem;color:var(--t3);padding:4px 0">No tasks yet.</p>`
+        : todos.map((t,i)=>`
+          <div class="todo-item ${t.done?'done':''}" onclick="Widgets.todo.toggle(${i})">
+            <div class="todo-cb">${t.done?'✓':''}</div>
+            <span class="todo-txt">${esc(t.text)}</span>
+            <button class="todo-del" onclick="event.stopPropagation();Widgets.todo.remove(${i})">✕</button>
+          </div>`).join('');
+      const cnt = $('todo-count');
+      if (cnt) cnt.textContent = `${todos.filter(t=>!t.done).length} left`;
     },
-
     add() {
-      const input = document.getElementById('todo-input');
-      const text  = input.value.trim();
-      if (!text) return;
-
-      App.state.todos.push({ text, done: false, id: Date.now() });
-      App.storage.save();
-      input.value = '';
-      this.render();
+      const inp = $('todo-input'); if(!inp||!inp.value.trim()) return;
+      STATE.todos.push({text:inp.value.trim(),done:false});
+      inp.value=''; save(); this.render();
     },
-
-    toggle(i) {
-      App.state.todos[i].done = !App.state.todos[i].done;
-      App.storage.save();
-      this.render();
-    },
-
-    remove(i) {
-      App.state.todos.splice(i, 1);
-      App.storage.save();
-      this.render();
-    },
-
-    /* Basic HTML escape to prevent XSS from user input */
-    escape(str) {
-      return str
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
+    toggle(i) { STATE.todos[i].done=!STATE.todos[i].done; save(); this.render(); },
+    remove(i) { STATE.todos.splice(i,1); save(); this.render(); }
   },
 
-
-  /* ── News ───────────────────────────────────────────────── */
+  /* ── News — RSS feeds via allorigins proxy (no key required) */
   news: {
+    /* Free public RSS feeds — no auth, proxied through allorigins to avoid CORS */
+    FEEDS: [
+      { name:'BBC News',    url:'http://feeds.bbci.co.uk/news/rss.xml' },
+      { name:'Reuters',     url:'https://feeds.reuters.com/reuters/topNews' },
+      { name:'AP News',     url:'https://rsshub.app/apnews/topics/apf-topnews' },
+      { name:'NPR',         url:'https://feeds.npr.org/1001/rss.xml' },
+      { name:'The Guardian',url:'https://www.theguardian.com/world/rss' },
+    ],
+
     async init() { await this.refresh(); },
 
     async refresh() {
-      const key    = App.state.apiKeys.news;
-      const topics = App.state.topics || 'technology';
-      const list   = document.getElementById('news-list');
+      const el = $('news-list'); if(!el) return;
+      el.innerHTML = `<p class="news-empty shimmer-text">Loading headlines…</p>`;
 
-      if (!key) {
-        list.innerHTML = `
-          <p class="news-empty">Add your NewsAPI key in Settings to load headlines.</p>
-          <p class="news-api-note">Free key at <a href="https://newsapi.org" target="_blank">newsapi.org</a></p>
-        `;
-        return;
-      }
-
-      list.innerHTML = `<div class="skeleton" style="height:16px;width:80%;margin:4px 0"></div>
-                        <div class="skeleton" style="height:16px;width:70%;margin:4px 0"></div>
-                        <div class="skeleton" style="height:16px;width:85%;margin:4px 0"></div>`;
+      /* Pick feed based on user topics; default to BBC */
+      const topic   = (STATE.topics||'').toLowerCase();
+      let   feed    = this.FEEDS[0];
+      if (topic.includes('sport'))   feed = { name:'BBC Sport',   url:'http://feeds.bbci.co.uk/sport/rss.xml' };
+      if (topic.includes('tech'))    feed = { name:'Ars Technica', url:'http://feeds.arstechnica.com/arstechnica/index' };
+      if (topic.includes('finance') || topic.includes('business'))
+                                     feed = { name:'Reuters Biz',  url:'https://feeds.reuters.com/reuters/businessNews' };
+      if (topic.includes('science')) feed = { name:'ScienceDaily', url:'https://www.sciencedaily.com/rss/all.xml' };
 
       try {
-        const query = topics.split(',')[0].trim();
-        const res   = await fetch(
-          `https://newsapi.org/v2/top-headlines?q=${encodeURIComponent(query)}&language=en&pageSize=7&apiKey=${key}`
-        );
-        if (!res.ok) throw new Error('News API error');
-        const data = await res.json();
+        /* allorigins.win converts any RSS to JSON — completely free, no key */
+        const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(feed.url)}`;
+        const r = await fetch(proxy);
+        if (!r.ok) throw 0;
+        const { contents } = await r.json();
 
-        if (!data.articles || data.articles.length === 0) {
-          list.innerHTML = `<p class="news-empty">No headlines found for "${query}".</p>`;
-          return;
+        /* Parse RSS XML */
+        const parser = new DOMParser();
+        const doc    = parser.parseFromString(contents, 'text/xml');
+        const items  = [...doc.querySelectorAll('item')].slice(0, 7);
+
+        if (!items.length) throw 0;
+
+        el.innerHTML = items.map(item => {
+          const title = item.querySelector('title')?.textContent?.trim() || 'Untitled';
+          const link  = item.querySelector('link')?.textContent?.trim()  || '#';
+          const pub   = item.querySelector('pubDate')?.textContent;
+          const ago   = pub ? this.ago(pub) : '';
+          return `
+            <div class="news-item">
+              <a href="${link}" target="_blank" rel="noopener">${esc(title)}</a>
+              <div class="news-src">${feed.name}${ago ? ' · ' + ago : ''}</div>
+            </div>`;
+        }).join('');
+      } catch {
+        /* Try a second feed as fallback */
+        try {
+          const fb = this.FEEDS[1];
+          const proxy2 = `https://api.allorigins.win/get?url=${encodeURIComponent(fb.url)}`;
+          const r2 = await fetch(proxy2);
+          if (!r2.ok) throw 0;
+          const { contents: c2 } = await r2.json();
+          const doc2  = new DOMParser().parseFromString(c2, 'text/xml');
+          const items2 = [...doc2.querySelectorAll('item')].slice(0,7);
+          el.innerHTML = items2.map(item => {
+            const title = item.querySelector('title')?.textContent?.trim() || 'Untitled';
+            const link  = item.querySelector('link')?.textContent?.trim()  || '#';
+            return `<div class="news-item"><a href="${link}" target="_blank" rel="noopener">${esc(title)}</a><div class="news-src">${fb.name}</div></div>`;
+          }).join('');
+        } catch {
+          el.innerHTML = `<p class="news-empty">Couldn't load news right now. Try refreshing.</p>`;
         }
-
-        list.innerHTML = data.articles.map(a => `
-          <div class="news-item">
-            <a href="${a.url}" target="_blank" rel="noopener">${a.title}</a>
-            <span class="news-source">${a.source.name} · ${this.timeAgo(a.publishedAt)}</span>
-          </div>
-        `).join('');
-      } catch (e) {
-        console.warn('News fetch failed:', e);
-        list.innerHTML = `<p class="news-empty">Couldn't load news. Check your API key in Settings.</p>`;
       }
     },
 
-    timeAgo(dateStr) {
-      const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
-      if (diff < 60) return `${diff}m ago`;
+    ago(s) {
+      const diff = Math.floor((Date.now()-new Date(s))/60000);
+      if (diff < 60)   return `${diff}m ago`;
       if (diff < 1440) return `${Math.floor(diff/60)}h ago`;
       return `${Math.floor(diff/1440)}d ago`;
     }
   },
 
-
-  /* ── Sports ─────────────────────────────────────────────── */
+  /* ── Sports ────────────────────────────────────────────── */
   sports: {
     async init() { await this.refresh(); },
-
     async refresh() {
-      const team    = App.state.team;
-      const content = document.getElementById('sports-content');
-
-      if (!team) {
-        content.innerHTML = `<p class="sports-empty">Add your favorite team in Settings.</p>`;
-        return;
-      }
-
-      document.getElementById('sports-team-name').textContent = team;
-      content.innerHTML = `<div class="skeleton" style="height:60px;border-radius:8px;"></div>`;
-
+      const el = $('sports-content'); if(!el) return;
+      const team = STATE.team;
+      if (!team) { el.innerHTML=`<p class="sports-empty">Set your team in Settings.</p>`; return; }
+      const label = $('sports-label'); if(label) label.textContent = team;
+      el.innerHTML = `<p class="sports-empty" style="animation:shimmer-anim 1.5s infinite">Loading…</p>`;
       try {
-        /* TheSportsDB free API — search events for team */
-        const searchRes = await fetch(
-          `https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${encodeURIComponent(team)}`
-        );
-        const searchData = await searchRes.json();
-
-        if (!searchData.teams || searchData.teams.length === 0) {
-          content.innerHTML = `<p class="sports-empty">Team not found. Try a different name.</p>`;
-          return;
-        }
-
-        const teamId = searchData.teams[0].idTeam;
-
-        /* Get next event */
-        const nextRes  = await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=${teamId}`);
-        const nextData = await nextRes.json();
-
-        if (!nextData.events || nextData.events.length === 0) {
-          content.innerHTML = `<p class="sports-empty">No upcoming games found.</p>`;
-          return;
-        }
-
-        const evt = nextData.events[0];
-        const gameDate = new Date(evt.dateEvent + 'T' + (evt.strTime || '00:00:00'));
-        const dateLabel = gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-
-        content.innerHTML = `
-          <div class="sports-game">
-            <div class="sports-teams">
-              <div class="sports-team">
-                <span class="sports-team-name">${evt.strHomeTeam}</span>
-                <span class="sports-score">${evt.intHomeScore ?? '–'}</span>
-              </div>
-              <span class="sports-vs">vs</span>
-              <div class="sports-team">
-                <span class="sports-team-name">${evt.strAwayTeam}</span>
-                <span class="sports-score">${evt.intAwayScore ?? '–'}</span>
-              </div>
+        const sr = await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${encodeURIComponent(team)}`);
+        const sd = await sr.json();
+        if (!sd.teams?.length) { el.innerHTML=`<p class="sports-empty">Team not found.</p>`; return; }
+        const tid = sd.teams[0].idTeam;
+        const nr = await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=${tid}`);
+        const nd = await nr.json();
+        if (!nd.events?.length) { el.innerHTML=`<p class="sports-empty">No upcoming games.</p>`; return; }
+        const ev = nd.events[0];
+        const date = new Date(ev.dateEvent+'T'+(ev.strTime||'00:00:00'));
+        const dlabel = date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+        el.innerHTML = `
+          <div class="sports-matchup">
+            <div class="sports-team">
+              <span class="sports-tname">${esc(ev.strHomeTeam)}</span>
+              <span class="sports-score">${ev.intHomeScore??'–'}</span>
             </div>
-            <div class="sports-status">${dateLabel} · ${evt.strLeague}</div>
+            <span class="sports-vs">vs</span>
+            <div class="sports-team">
+              <span class="sports-tname">${esc(ev.strAwayTeam)}</span>
+              <span class="sports-score">${ev.intAwayScore??'–'}</span>
+            </div>
           </div>
-        `;
-      } catch (e) {
-        console.warn('Sports fetch failed:', e);
-        content.innerHTML = `<p class="sports-empty">Couldn't load sports data.</p>`;
-      }
+          <div class="sports-info">${dlabel} · ${esc(ev.strLeague)}</div>`;
+      } catch { el.innerHTML=`<p class="sports-empty">Couldn't load sports data.</p>`; }
     }
   },
 
-
-  /* ── Quote ──────────────────────────────────────────────── */
+  /* ── Quote ─────────────────────────────────────────────── */
   quote: {
+    FALLBACKS: [
+      {content:'The secret of getting ahead is getting started.',author:'Mark Twain'},
+      {content:'Simplicity is the ultimate sophistication.',author:'Leonardo da Vinci'},
+      {content:'It does not matter how slowly you go as long as you do not stop.',author:'Confucius'},
+      {content:'What we think, we become.',author:'Buddha'},
+    ],
     async fetch() {
-      const textEl   = document.getElementById('quote-text');
-      const authorEl = document.getElementById('quote-author');
-
-      textEl.textContent   = 'Loading…';
-      authorEl.textContent = '—';
-
+      const te=$('q-text'), ae=$('q-author'); if(!te||!ae) return;
+      te.textContent='Loading…'; ae.textContent='—';
       try {
-        /* quotable.io — free, no auth needed */
-        const res  = await fetch('https://api.quotable.io/random?maxLength=120');
-        if (!res.ok) throw new Error();
-        const data = await res.json();
-        textEl.textContent   = data.content;
-        authorEl.textContent = `— ${data.author}`;
+        const r = await fetch('https://api.quotable.io/random?maxLength=120');
+        if (!r.ok) throw 0;
+        const d = await r.json();
+        te.textContent=d.content; ae.textContent=`— ${d.author}`;
       } catch {
-        /* Fallback quotes if API is unavailable */
-        const fallbacks = [
-          { content: 'The secret of getting ahead is getting started.', author: 'Mark Twain' },
-          { content: 'It does not matter how slowly you go as long as you do not stop.', author: 'Confucius' },
-          { content: 'Quality is not an act, it is a habit.', author: 'Aristotle' },
-          { content: 'Simplicity is the ultimate sophistication.', author: 'Leonardo da Vinci' },
-        ];
-        const q = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-        textEl.textContent   = q.content;
-        authorEl.textContent = `— ${q.author}`;
+        const q = this.FALLBACKS[Math.floor(Math.random()*this.FALLBACKS.length)];
+        te.textContent=q.content; ae.textContent=`— ${q.author}`;
       }
     }
   },
 
-
-  /* ── Market ─────────────────────────────────────────────── */
+  /* ── Market ────────────────────────────────────────────── */
   market: {
-    /* Default watchlist — user can customize later */
-    COINS: ['bitcoin', 'ethereum', 'solana'],
-
-    async init() {
-      if (!App.state.widgets.market) return;
-      await this.refresh();
-    },
-
+    COINS:['bitcoin','ethereum','solana'],
+    NAMES:{bitcoin:'Bitcoin',ethereum:'Ethereum',solana:'Solana'},
+    async init() { await this.refresh(); },
     async refresh() {
-      const list = document.getElementById('market-list');
-      list.innerHTML = `<div class="skeleton" style="height:14px;margin:4px 0"></div>`.repeat(3);
-
+      const el=$('mkt-list'); if(!el) return;
+      el.innerHTML=`<p class="news-empty" style="animation:shimmer-anim 1.5s infinite">Loading…</p>`;
       try {
-        /* CoinGecko free API — no auth needed */
-        const ids = this.COINS.join(',');
-        const res = await fetch(
-          `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`
-        );
-        if (!res.ok) throw new Error('Market API error');
-        const data = await res.json();
-
-        const coinNames = { bitcoin: 'Bitcoin', ethereum: 'Ethereum', solana: 'Solana' };
-
-        list.innerHTML = this.COINS.map(id => {
-          if (!data[id]) return '';
-          const price  = data[id].usd;
-          const change = data[id].usd_24h_change;
-          const dir    = change >= 0 ? 'up' : 'down';
-          const sign   = change >= 0 ? '+' : '';
-
-          return `
-            <div class="market-item">
-              <div>
-                <div class="market-name">${coinNames[id] || id}</div>
-                <div class="market-symbol">${id.toUpperCase().slice(0,3)}</div>
-              </div>
-              <div style="text-align:right">
-                <div class="market-price">$${price.toLocaleString('en-US', {maximumFractionDigits:2})}</div>
-                <div class="market-change ${dir}">${sign}${change.toFixed(2)}%</div>
-              </div>
-            </div>
-          `;
+        const ids=this.COINS.join(',');
+        const r=await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+        if(!r.ok) throw 0;
+        const d=await r.json();
+        el.innerHTML=this.COINS.map(id=>{
+          if(!d[id]) return '';
+          const p=d[id].usd, ch=d[id].usd_24h_change, dir=ch>=0?'up':'down', sign=ch>=0?'+':'';
+          return `<div class="mkt-item">
+            <div><div class="mkt-name">${this.NAMES[id]||id}</div><div class="mkt-sym">${id.slice(0,3).toUpperCase()}</div></div>
+            <div style="text-align:right"><div class="mkt-price">$${p.toLocaleString('en-US',{maximumFractionDigits:2})}</div>
+            <div class="mkt-${dir}">${sign}${ch.toFixed(2)}%</div></div></div>`;
         }).join('');
-      } catch (e) {
-        console.warn('Market fetch failed:', e);
-        list.innerHTML = `<p class="news-empty">Couldn't load market data.</p>`;
-      }
+      } catch { el.innerHTML=`<p class="news-empty">Couldn't load market data.</p>`; }
     }
   },
 
-
-  /* ── Habits ─────────────────────────────────────────────── */
+  /* ── Habits ────────────────────────────────────────────── */
   habit: {
-    /* Default habits if none saved */
-    DEFAULTS: ['Exercise', 'Read', 'Meditate'],
-
-    init() {
-      if (App.state.habits.length === 0) {
-        App.state.habits = this.DEFAULTS.map(name => ({
-          name, streak: 0, doneToday: false, lastDate: null
-        }));
-        App.storage.save();
-      }
-    },
-
+    DEFAULTS:['Exercise','Read','Meditate'],
     render() {
-      if (!App.state.widgets.habit) return;
-      this.init();
-
-      const today = new Date().toDateString();
-      const list  = document.getElementById('habit-list');
-
-      list.innerHTML = App.state.habits.map((h, i) => `
-        <div class="habit-item ${h.doneToday ? 'done' : ''}" onclick="App.habit.toggle(${i})">
-          <div class="habit-check">${h.doneToday ? '✓' : ''}</div>
-          <span class="habit-name">${h.name}</span>
-          <span class="habit-streak">${h.streak > 0 ? `${h.streak}🔥` : ''}</span>
-        </div>
-      `).join('');
-    },
-
-    toggle(i) {
-      const habit = App.state.habits[i];
-      const today = new Date().toDateString();
-      habit.doneToday = !habit.doneToday;
-
-      if (habit.doneToday) {
-        const lastDay = habit.lastDate ? new Date(habit.lastDate).toDateString() : null;
-        const yesterday = new Date(Date.now() - 86400000).toDateString();
-        habit.streak = (lastDay === yesterday) ? habit.streak + 1 : 1;
-        habit.lastDate = new Date().toISOString();
-      } else {
-        habit.streak = Math.max(0, habit.streak - 1);
+      if (!STATE.habits.length) {
+        STATE.habits=this.DEFAULTS.map(name=>({name,streak:0,done:false,lastDate:null}));
+        save();
       }
-
-      App.storage.save();
-      this.render();
+      const el=$('habit-list'); if(!el) return;
+      el.innerHTML=STATE.habits.map((h,i)=>`
+        <div class="habit-item ${h.done?'done':''}" onclick="Widgets.habit.toggle(${i})">
+          <div class="habit-chk">${h.done?'✓':''}</div>
+          <span class="habit-name">${esc(h.name)}</span>
+          <span class="habit-streak">${h.streak>0?h.streak+'🔥':''}</span>
+        </div>`).join('');
+    },
+    toggle(i) {
+      const h=STATE.habits[i], yest=new Date(Date.now()-86400000).toDateString();
+      h.done=!h.done;
+      if (h.done) {
+        h.streak=(h.lastDate&&new Date(h.lastDate).toDateString()===yest)?h.streak+1:1;
+        h.lastDate=new Date().toISOString();
+      } else { h.streak=Math.max(0,h.streak-1); }
+      save(); this.render();
     }
   },
 
-
-  /* ── Countdowns ─────────────────────────────────────────── */
+  /* ── Countdown ─────────────────────────────────────────── */
   countdown: {
-    _timer: null,
-
+    _t:null,
     render() {
-      if (!App.state.widgets.countdown) return;
-
-      const list = document.getElementById('countdown-list');
-
-      if (App.state.countdowns.length === 0) {
-        list.innerHTML = `<p style="font-size:0.82rem;color:var(--text-3)">No countdowns yet. Add one with the + button.</p>`;
-        return;
-      }
-
-      const now = Date.now();
-      list.innerHTML = App.state.countdowns.map((c, i) => {
-        const diff    = new Date(c.date).getTime() - now;
-        const days    = Math.floor(diff / 86400000);
-        const hours   = Math.floor((diff % 86400000) / 3600000);
-        const minutes = Math.floor((diff % 3600000) / 60000);
-        const label   = diff < 0 ? 'Passed' : `${days}d ${hours}h ${minutes}m`;
-
-        return `
-          <div class="countdown-item">
-            <div class="countdown-name">${c.name}</div>
-            <div class="countdown-value">${label}</div>
-            <div class="countdown-sub">${new Date(c.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
-          </div>
-        `;
+      const el=$('cd-list'); if(!el) return;
+      if (!STATE.countdowns.length) { el.innerHTML=`<p class="cd-empty">Add an event with the + button.</p>`; return; }
+      const now=Date.now();
+      el.innerHTML=STATE.countdowns.map(c=>{
+        const diff=new Date(c.date).getTime()-now;
+        const d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000), m=Math.floor((diff%3600000)/60000);
+        const label=diff<0?'Passed':`${d}d ${h}h ${m}m`;
+        return `<div class="cd-item"><div class="cd-name">${esc(c.name)}</div><div class="cd-val">${label}</div><div class="cd-sub">${new Date(c.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div></div>`;
       }).join('');
     },
-
-    startTick() {
-      this._timer = setInterval(() => this.render(), 60000);
-    },
-
+    tick() { clearInterval(this._t); this._t=setInterval(()=>this.render(),60000); },
     addPrompt() {
-      const name = prompt('Event name:');
-      if (!name) return;
-      const dateStr = prompt('Event date (YYYY-MM-DD):');
-      if (!dateStr) return;
-      App.state.countdowns.push({ name: name.trim(), date: dateStr });
-      App.storage.save();
-      this.render();
+      const name=prompt('Event name:'); if(!name) return;
+      const date=prompt('Date (YYYY-MM-DD):'); if(!date) return;
+      STATE.countdowns.push({name:name.trim(),date});
+      save(); this.render();
     }
   },
 
-
-  /* ── Quick Links ────────────────────────────────────────── */
+  /* ── Links ─────────────────────────────────────────────── */
   links: {
-    DEFAULTS: [
-      { label: 'Gmail',    url: 'https://mail.google.com',    icon: '✉' },
-      { label: 'Canvas',   url: 'https://canvas.instructure.com', icon: '◎' },
-      { label: 'GitHub',   url: 'https://github.com',         icon: '◈' },
-      { label: 'Calendar', url: 'https://calendar.google.com',icon: '◷' },
+    DEFAULTS:[
+      {label:'Gmail',url:'https://mail.google.com',icon:'✉'},
+      {label:'Canvas',url:'https://canvas.instructure.com',icon:'◎'},
+      {label:'GitHub',url:'https://github.com',icon:'◈'},
+      {label:'Calendar',url:'https://calendar.google.com',icon:'◷'},
     ],
-
     render() {
-      if (!App.state.widgets.links) return;
-      if (App.state.links.length === 0) {
-        App.state.links = [...this.DEFAULTS];
-        App.storage.save();
-      }
-
-      const grid = document.getElementById('links-grid');
-      grid.innerHTML = App.state.links.map((l, i) => `
-        <a class="link-item" href="${l.url}" target="_blank" rel="noopener" title="${l.label}">
-          <div class="link-icon">${l.icon || '◉'}</div>
-          <span class="link-label">${l.label}</span>
-        </a>
-      `).join('');
+      if (!STATE.links.length) { STATE.links=[...this.DEFAULTS]; save(); }
+      const el=$('links-grid'); if(!el) return;
+      el.innerHTML=STATE.links.map(l=>`
+        <a class="link-item" href="${l.url}" target="_blank" rel="noopener">
+          <div class="link-icon">${l.icon||'◉'}</div>
+          <span class="link-lbl">${esc(l.label)}</span>
+        </a>`).join('');
     },
-
     addPrompt() {
-      const label = prompt('Link label:');
-      if (!label) return;
-      const url   = prompt('URL (include https://):');
-      if (!url) return;
-      const icon  = prompt('Icon (emoji or symbol, optional):') || '◉';
-      App.state.links.push({ label: label.trim(), url: url.trim(), icon });
-      App.storage.save();
-      this.render();
-    }
-  },
-
-
-  /* ── AI Daily Brief ─────────────────────────────────────── */
-  brief: {
-    async fetch() {
-      const key     = App.state.apiKeys.openai;
-      const textEl  = document.getElementById('brief-text');
-
-      if (!key) {
-        textEl.innerHTML = `
-          <span style="color:var(--text-3)">
-            Add your OpenAI key in Settings to enable AI daily briefs.
-          </span>
-        `;
-        return;
-      }
-
-      textEl.innerHTML = `<span class="brief-loading">Generating your daily brief…</span>`;
-
-      /* Build context from current state */
-      const name   = App.state.name || 'there';
-      const city   = App.state.city || 'your city';
-      const todos  = App.state.todos.filter(t => !t.done).map(t => t.text).join(', ') || 'none';
-      const hour   = new Date().getHours();
-      const tod    = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
-
-      const prompt = `You are a smart personal assistant writing a brief daily summary for ${name}.
-It is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}, ${tod}.
-They are in ${city}.
-Their pending tasks today: ${todos}.
-Write a warm, concise 2-3 sentence brief: acknowledge the day, mention their tasks if any, and give one motivating note.
-Be natural and conversational. No bullet points. No greetings like "Good morning" since that's already shown.`;
-
-      try {
-        const res = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${key}`
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            max_tokens: 120,
-            messages: [{ role: 'user', content: prompt }]
-          })
-        });
-
-        if (!res.ok) throw new Error('OpenAI API error');
-        const data = await res.json();
-        textEl.textContent = data.choices[0].message.content.trim();
-      } catch (e) {
-        console.warn('Brief fetch failed:', e);
-        textEl.innerHTML = `<span style="color:var(--text-3)">Couldn't generate brief. Check your OpenAI key in Settings.</span>`;
-      }
-    }
-  },
-
-
-  /* ── Settings Panel ─────────────────────────────────────── */
-  settings: {
-    open() {
-      /* Populate fields with current state */
-      document.getElementById('s-name').value   = App.state.name;
-      document.getElementById('s-city').value   = App.state.city;
-      document.getElementById('s-team').value   = App.state.team;
-      document.getElementById('s-topics').value = App.state.topics;
-      document.getElementById('s-openai').value = App.state.apiKeys.openai;
-      document.getElementById('s-weather').value= App.state.apiKeys.weather;
-      document.getElementById('s-news').value   = App.state.apiKeys.news;
-
-      /* Sync theme/accent buttons */
-      App.theme.apply();
-
-      document.getElementById('settings-panel').classList.add('open');
-      document.getElementById('settings-backdrop').classList.remove('hidden');
-    },
-
-    close() {
-      document.getElementById('settings-panel').classList.remove('open');
-      document.getElementById('settings-backdrop').classList.add('hidden');
-    },
-
-    save() {
-      App.state.name   = document.getElementById('s-name').value.trim();
-      App.state.city   = document.getElementById('s-city').value.trim() || 'Boston';
-      App.state.team   = document.getElementById('s-team').value.trim();
-      App.state.topics = document.getElementById('s-topics').value.trim();
-
-      App.state.apiKeys.openai  = document.getElementById('s-openai').value.trim();
-      App.state.apiKeys.weather = document.getElementById('s-weather').value.trim();
-      App.state.apiKeys.news    = document.getElementById('s-news').value.trim();
-
-      App.storage.save();
-      App.theme.apply();
-      App.greeting.update();
-      App.weather.init();
-      App.news.refresh();
-      App.sports.refresh();
-      App.brief.fetch();
-      this.close();
-    },
-
-    reset() {
-      if (!confirm('This will clear all your data and preferences. Are you sure?')) return;
-      localStorage.removeItem(App.storage.KEY);
-      location.reload();
-    },
-
-    buildToggles() {
-      App.widgets.buildToggles();
-    }
-  },
-
-
-  /* ── Focus Mode ─────────────────────────────────────────── */
-  focusMode: {
-    active: false,
-    toggle() {
-      this.active = !this.active;
-      document.body.classList.toggle('focus-mode', this.active);
-      document.getElementById('focus-btn').style.color = this.active ? 'var(--accent)' : '';
+      const label=prompt('Label:'); if(!label) return;
+      const url=prompt('URL (https://…):'); if(!url) return;
+      const icon=prompt('Icon (emoji/symbol):','◉')||'◉';
+      STATE.links.push({label:label.trim(),url:url.trim(),icon});
+      save(); this.render();
     }
   }
+};
 
-}; /* end App */
+
+/* ═══════════════════════════════════════════════════════════
+   DRAG & DROP (reorder widgets)
+═══════════════════════════════════════════════════════════ */
+const DragDrop = {
+  dragIdx: null,
+
+  bind() {
+    document.querySelectorAll('.widget').forEach((el, idx) => {
+      el.setAttribute('draggable', true);
+
+      el.addEventListener('dragstart', e => {
+        if (!$('canvas').classList.contains('edit-mode')) { e.preventDefault(); return; }
+        this.dragIdx = idx;
+        el.classList.add('is-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      el.addEventListener('dragend', () => {
+        el.classList.remove('is-dragging');
+        document.querySelectorAll('.widget').forEach(w => w.classList.remove('drag-over'));
+      });
+
+      el.addEventListener('dragover', e => {
+        if (!$('canvas').classList.contains('edit-mode')) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        document.querySelectorAll('.widget').forEach(w => w.classList.remove('drag-over'));
+        el.classList.add('drag-over');
+      });
+
+      el.addEventListener('drop', e => {
+        e.preventDefault();
+        if (this.dragIdx === null || this.dragIdx === idx) return;
+        /* Swap in STATE.widgets array */
+        const arr = STATE.widgets;
+        [arr[this.dragIdx], arr[idx]] = [arr[idx], arr[this.dragIdx]];
+        save();
+        Canvas.render();
+        this.dragIdx = null;
+      });
+    });
+  }
+};
 
 
-/* ============================================================
-   Bootstrap — run when DOM is ready
-   ============================================================ */
-document.addEventListener('DOMContentLoaded', () => App.init());
+/* ═══════════════════════════════════════════════════════════
+   WIDGET EDITOR
+═══════════════════════════════════════════════════════════ */
+const Editor = {
+  activeIdx: null,
+
+  toggle() {
+    const canvas  = $('canvas');
+    const toolbar = $('edit-toolbar');
+    const btn     = $('edit-btn');
+    const label   = $('edit-label');
+    const isEdit  = canvas.classList.toggle('edit-mode');
+    toolbar.classList.toggle('hidden', !isEdit);
+    btn.classList.toggle('active', isEdit);
+    if (label) label.textContent = isEdit ? 'Editing…' : 'Edit';
+    if (!isEdit) this.closePanel();
+  },
+
+  openPanel(idx) {
+    this.activeIdx = idx;
+    const wc = STATE.widgets[idx];
+    const meta = WIDGET_META[wc.id];
+
+    $('wpanel-title').textContent = meta?.label || wc.id;
+
+    /* Sync size buttons */
+    document.querySelectorAll('.size-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.cols)===wc.cols && parseInt(b.dataset.rows)===wc.rows);
+    });
+
+    /* Sync font buttons */
+    document.querySelectorAll('.font-btn').forEach(b => b.classList.toggle('active', b.dataset.font===wc.font));
+
+    /* Sync style buttons */
+    document.querySelectorAll('.style-btn').forEach(b => b.classList.toggle('active', b.dataset.style===wc.style));
+
+    /* Sync opacity */
+    $('opacity-slider').value = wc.opacity ?? 80;
+    $('opacity-val').textContent = `${wc.opacity ?? 80}%`;
+
+    /* Sync tint */
+    document.querySelectorAll('.tint-dot').forEach(b => b.classList.toggle('active', b.dataset.tint===(wc.tint||'none')));
+
+    /* Sync radius */
+    $('radius-slider').value = wc.radius ?? 20;
+    $('radius-val').textContent = `${wc.radius ?? 20}px`;
+
+    $('wpanel').classList.add('open');
+    $('wpanel-backdrop').classList.remove('hidden');
+  },
+
+  closePanel() {
+    $('wpanel').classList.remove('open');
+    $('wpanel-backdrop').classList.add('hidden');
+    this.activeIdx = null;
+  },
+
+  _updateWidget() {
+    if (this.activeIdx === null) return;
+    const wc = STATE.widgets[this.activeIdx];
+    const el = document.querySelector(`[data-idx="${this.activeIdx}"]`);
+    if (!el) return;
+
+    el.style.gridColumn   = `span ${wc.cols}`;
+    el.style.gridRow      = `span ${wc.rows}`;
+    el.style.opacity      = (wc.opacity ?? 80) / 100;
+    el.style.borderRadius = `${wc.radius ?? 20}px`;
+    el.dataset.wstyle     = wc.style || 'glass';
+    el.dataset.wfont      = wc.font  || 'cabinet';
+
+    if (wc.tint && wc.tint !== 'none') { el.dataset.tint = wc.tint; }
+    else { delete el.dataset.tint; }
+    save();
+  },
+
+  setSize(cols, rows, btn) {
+    if (this.activeIdx === null) return;
+    STATE.widgets[this.activeIdx].cols = cols;
+    STATE.widgets[this.activeIdx].rows = rows;
+    document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    this._updateWidget();
+  },
+
+  setFont(font, btn) {
+    if (this.activeIdx === null) return;
+    STATE.widgets[this.activeIdx].font = font;
+    document.querySelectorAll('.font-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    this._updateWidget();
+  },
+
+  setStyle(style, btn) {
+    if (this.activeIdx === null) return;
+    STATE.widgets[this.activeIdx].style = style;
+    document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    this._updateWidget();
+  },
+
+  setOpacity(val) {
+    if (this.activeIdx === null) return;
+    STATE.widgets[this.activeIdx].opacity = parseInt(val);
+    $('opacity-val').textContent = `${val}%`;
+    this._updateWidget();
+  },
+
+  setTint(tint, btn) {
+    if (this.activeIdx === null) return;
+    STATE.widgets[this.activeIdx].tint = tint;
+    document.querySelectorAll('.tint-dot').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    this._updateWidget();
+  },
+
+  setRadius(val) {
+    if (this.activeIdx === null) return;
+    STATE.widgets[this.activeIdx].radius = parseInt(val);
+    $('radius-val').textContent = `${val}px`;
+    this._updateWidget();
+  },
+
+  removeWidget() {
+    if (this.activeIdx === null) return;
+    if (!confirm('Remove this widget?')) return;
+    STATE.widgets.splice(this.activeIdx, 1);
+    save();
+    this.closePanel();
+    Canvas.render();
+  },
+
+  addWidget() {
+    /* Build add-widget list */
+    const list = $('add-widget-list');
+    const existing = new Set(STATE.widgets.map(w => w.id));
+    list.innerHTML = Object.entries(WIDGET_META).map(([id, meta]) => `
+      <button class="add-w-btn" ${existing.has(id)?'disabled title="Already on dashboard"':''} onclick="Editor.doAdd('${id}')">
+        <i>${meta.icon}</i>${meta.label}
+      </button>`).join('');
+    $('add-modal').classList.remove('hidden');
+    $('modal-backdrop').classList.remove('hidden');
+  },
+
+  doAdd(id) {
+    const meta = WIDGET_META[id];
+    STATE.widgets.push({ id, cols:meta.defaultCols, rows:meta.defaultRows, font:'cabinet', style:'glass', opacity:80, tint:'none', radius:20 });
+    save();
+    this.closeAdd();
+    Canvas.render();
+  },
+
+  closeAdd() {
+    $('add-modal').classList.add('hidden');
+    $('modal-backdrop').classList.add('hidden');
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   SETTINGS
+═══════════════════════════════════════════════════════════ */
+const Settings = {
+  open() {
+    $('s-name').value   = STATE.name;
+    $('s-city').value   = STATE.city;
+    $('s-team').value   = STATE.team;
+    $('s-topics').value = STATE.topics;
+    $('s-openai').value = STATE.apiKeys.openai;
+
+    /* Sync bg buttons */
+    document.querySelectorAll('.s-bg-btn').forEach(b => b.classList.toggle('active', b.dataset.bg===STATE.bg));
+    document.querySelectorAll('.s-accent-row .accent-dot').forEach(b => b.classList.toggle('active', b.dataset.accent===STATE.accent));
+
+    this.buildWidgetToggles();
+    $('settings-panel').classList.add('open');
+    $('settings-backdrop').classList.remove('hidden');
+  },
+
+  close() {
+    $('settings-panel').classList.remove('open');
+    $('settings-backdrop').classList.add('hidden');
+  },
+
+  save() {
+    STATE.name   = $('s-name').value.trim();
+    STATE.city   = $('s-city').value.trim() || 'Boston';
+    STATE.team   = $('s-team').value.trim();
+    STATE.topics = $('s-topics').value.trim();
+    STATE.apiKeys.openai  = $('s-openai').value.trim();
+
+    save();
+    applyBg();
+    updateGreeting();
+    Widgets.weather.init();
+    Widgets.news.init();
+    Widgets.sports.init();
+    App.brief.fetch();
+    this.close();
+  },
+
+  setBg(bg, btn) {
+    STATE.bg = bg;
+    applyBg();
+    document.querySelectorAll('.s-bg-btn').forEach(b => b.classList.toggle('active', b.dataset.bg===bg));
+  },
+
+  setAccent(accent, btn) {
+    STATE.accent = accent;
+    document.documentElement.dataset.accent = accent;
+    document.querySelectorAll('.s-accent-row .accent-dot').forEach(b => b.classList.toggle('active', b.dataset.accent===accent));
+  },
+
+  buildWidgetToggles() {
+    const el = $('s-widget-toggles'); if(!el) return;
+    const existing = new Set(STATE.widgets.map(w=>w.id));
+    el.innerHTML = Object.entries(WIDGET_META).map(([id, meta]) => {
+      const on = existing.has(id);
+      return `<div class="s-widget-toggle">
+        <span>${meta.label}</span>
+        <label class="toggle-sw">
+          <input type="checkbox" ${on?'checked':''} onchange="Settings.toggleWidget('${id}',this.checked)"/>
+          <span class="toggle-sl"></span>
+        </label>
+      </div>`;
+    }).join('');
+  },
+
+  toggleWidget(id, on) {
+    if (on) {
+      if (!STATE.widgets.find(w=>w.id===id)) {
+        const meta=WIDGET_META[id];
+        STATE.widgets.push({id,cols:meta.defaultCols,rows:meta.defaultRows,font:'cabinet',style:'glass',opacity:80,tint:'none',radius:20});
+      }
+    } else {
+      STATE.widgets = STATE.widgets.filter(w=>w.id!==id);
+    }
+    save(); Canvas.render();
+  },
+
+  reset() {
+    if (!confirm('Reset all DayDeck data? This cannot be undone.')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   AI BRIEF
+═══════════════════════════════════════════════════════════ */
+const App = {
+  brief: {
+    async fetch() {
+      const key = STATE.apiKeys.openai;
+      const el  = $('brief-text');
+      if (!key) {
+        el.innerHTML = `<span style="color:var(--t3)">Add your OpenAI key in Settings to enable AI daily briefs.</span>`;
+        return;
+      }
+      el.innerHTML = `<span class="shimmer-text">Generating your daily brief…</span>`;
+      const name  = STATE.name || 'there';
+      const city  = STATE.city || 'your city';
+      const todos = STATE.todos.filter(t=>!t.done).map(t=>t.text).join(', ') || 'none';
+      const tod   = ['morning','afternoon','evening'][Math.floor(new Date().getHours()/8)|0>2?2:Math.floor(new Date().getHours()/8)|0];
+      const prompt= `You are a smart personal assistant. Write a warm, 2-sentence daily brief for ${name} in ${city}. It is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})} ${tod}. Their open tasks: ${todos}. Be concise, personal, and end with a subtle motivational nudge. No bullet points. No greeting prefix.`;
+      try {
+        const r = await fetch('https://api.openai.com/v1/chat/completions', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+          body:JSON.stringify({model:'gpt-4o-mini',max_tokens:100,messages:[{role:'user',content:prompt}]})
+        });
+        if(!r.ok) throw 0;
+        const d = await r.json();
+        el.textContent = d.choices[0].message.content.trim();
+      } catch {
+        el.innerHTML=`<span style="color:var(--t3)">Couldn't generate brief. Check your OpenAI key.</span>`;
+      }
+    }
+  },
+
+  focusMode: {
+    on: false,
+    toggle() {
+      this.on = !this.on;
+      document.body.classList.toggle('focus-mode', this.on);
+      $('focus-btn').classList.toggle('active', this.on);
+    }
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   GREETING
+═══════════════════════════════════════════════════════════ */
+function updateGreeting() {
+  const h = new Date().getHours();
+  const tod = h<12?'morning':h<17?'afternoon':'evening';
+  const name = STATE.name ? `, ${STATE.name}` : '';
+  const el = $('greeting'); if(el) el.textContent = `Good ${tod}${name}`;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   LAUNCH
+═══════════════════════════════════════════════════════════ */
+function launch() {
+  $('onboarding').classList.add('hidden');
+  $('app').classList.remove('hidden');
+
+  applyBg();
+  updateGreeting();
+  Canvas.render();
+  App.brief.fetch();
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  /* Load state */
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
+    STATE = deepMerge(DEFAULTS, saved||{});
+  } catch { STATE = {...DEFAULTS}; }
+
+  /* Apply accent immediately (before any render) */
+  document.documentElement.dataset.accent = STATE.accent || 'violet';
+
+  if (!STATE.onboardingDone) {
+    /* Show onboarding with current bg */
+    applyBg();
+    $('onboarding').classList.remove('hidden');
+  } else {
+    launch();
+  }
+});
