@@ -239,9 +239,9 @@ const Clock = {
   start(){this.tick();setInterval(()=>this.tick(),1000);},
   tick(){
     const now=new Date();
-    const h=now.getHours(),m=String(now.getMinutes()).padStart(2,'0');
+    const h=now.getHours(),m=String(now.getMinutes()).padStart(2,'0'),s=String(now.getSeconds()).padStart(2,'0');
     const ampm=h>=12?'PM':'AM',h12=((h%12)||12);
-    const t=`${h12}:${m} ${ampm}`;
+    const t=`${h12}:${m}:${s} ${ampm}`;
     const tc=$('tb-clock'); if(tc) tc.textContent=t;
     const cc=$('cx-clock'); if(cc) cc.textContent=t;
     const zc=$('zen-timer'); if(zc&&!Timer.running) {} // zen timer updates from Timer
