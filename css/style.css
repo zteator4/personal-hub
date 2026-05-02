@@ -21,7 +21,7 @@
   --f-sans:  'Geist', system-ui, sans-serif;
   --f-mono:  'Geist Mono', monospace;
   --rail-w: 185px;
-  --gap: 12px;
+  --gap: 14px;
   --r: 10px;
   --r-lg: 14px;
   --ease: cubic-bezier(0.4,0,0.2,1);
@@ -98,14 +98,14 @@ a:hover { text-decoration:underline; }
   align-items:start;
   min-height:100%;
 }
-@media(max-width:1100px) { .three-col { grid-template-columns:1fr 1fr; } .col-right { display:none; } }
-@media(max-width:700px)  { .three-col { grid-template-columns:1fr; } }
+@media(max-width:1100px) { .three-col { grid-template-columns:1fr 2fr; } .col-right { display:none; } }
+@media(max-width:767px)  { .three-col { grid-template-columns:1fr; } }
 
 .col { display:flex; flex-direction:column; gap:var(--gap); }
 .col-label {
-  font-size:0.68rem; font-weight:600; text-transform:uppercase; letter-spacing:0.1em;
-  color:var(--ink-3); padding-bottom:4px; border-bottom:1px solid var(--border);
-  margin-bottom:2px;
+  font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.1em;
+  color:var(--ink-3); padding-bottom:6px; border-bottom:1px solid var(--border);
+  margin-bottom:6px;
 }
 
 /* ── Cards ──────────────────────────────────────────────── */
@@ -113,6 +113,12 @@ a:hover { text-decoration:underline; }
   background:var(--bg-card); border:1px solid var(--border);
   border-radius:var(--r-lg); padding:0.9rem 1rem;
   display:flex; flex-direction:column; gap:0.65rem;
+  box-shadow:0 2px 8px rgba(0,0,0,0.06);
+  transition:transform 0.15s ease, box-shadow 0.15s ease;
+}
+.card:hover {
+  transform:translateY(-1px);
+  box-shadow:0 4px 12px rgba(0,0,0,0.09);
 }
 .card-hdr { display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
 .card-title { font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-2); }
@@ -218,7 +224,7 @@ a:hover { text-decoration:underline; }
   color:var(--ink-2); text-decoration:none; transition:all var(--t);
   white-space:nowrap;
 }
-.sd-item:hover { border-color:var(--accent); color:var(--accent); text-decoration:none; }
+.sd-item:hover { border-color:var(--accent); color:var(--accent); text-decoration:none; background:var(--accent-bg); }
 .sd-favicon { width:14px; height:14px; border-radius:2px; }
 .sd-del { margin-left:3px; font-size:0.6rem; color:var(--ink-3); opacity:0; transition:opacity var(--t); padding:1px 3px; }
 .sd-item:hover .sd-del { opacity:1; }
@@ -243,23 +249,12 @@ a:hover { text-decoration:underline; }
 .capture-input::placeholder { color:var(--ink-3); }
 kbd { font-family:var(--f-mono); font-size:0.65rem; color:var(--ink-3); border:1px solid var(--border-mid); border-radius:4px; padding:2px 5px; }
 
-/* ── Brief strip ────────────────────────────────────────── */
-.brief-strip {
-  display:flex; align-items:flex-start; gap:7px;
-  padding:0.5rem 0.85rem; background:var(--accent-bg);
-  border:1px solid var(--border); border-radius:var(--r-lg);
-  font-size:0.82rem; color:var(--accent-ink); line-height:1.5;
-}
-.brief-star { color:var(--accent); flex-shrink:0; font-size:0.75rem; margin-top:1px; }
-.brief-refresh { color:var(--ink-3); font-size:0.8rem; flex-shrink:0; transition:color var(--t),transform 0.4s; }
-.brief-refresh:hover { color:var(--accent); transform:rotate(180deg); }
-
 /* ── To-Do ──────────────────────────────────────────────── */
 .todo-list { display:flex; flex-direction:column; gap:2px; }
 .todo-item { display:flex; align-items:center; gap:8px; padding:6px 4px; border-radius:7px; cursor:pointer; transition:background var(--t); }
 .todo-item:hover { background:var(--bg-card2); }
-.todo-cb { width:16px; height:16px; border-radius:4px; border:2px solid var(--border-mid); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; transition:all var(--t); }
-.todo-item.done .todo-cb { background:var(--accent); border-color:var(--accent); color:#fff; }
+.todo-cb { width:16px; height:16px; border-radius:4px; border:2px solid var(--border-mid); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; transition:background 0.2s ease, border-color 0.2s ease, transform 0.2s ease; }
+.todo-item.done .todo-cb { background:var(--accent); border-color:var(--accent); color:#fff; transform:scale(1.12); }
 .todo-txt { flex:1; font-size:0.9rem; color:var(--ink); transition:color var(--t); }
 .todo-item.done .todo-txt { text-decoration:line-through; color:var(--ink-3); }
 .todo-del { opacity:0; font-size:0.68rem; color:var(--ink-3); padding:2px 4px; transition:opacity var(--t),color var(--t); }
@@ -489,27 +484,44 @@ kbd { font-family:var(--f-mono); font-size:0.65rem; color:var(--ink-3); border:1
 /* ── Empty msg ──────────────────────────────────────────── */
 .empty-msg { font-size:.85rem; color:var(--ink-3); padding:4px 0; }
 
-/* ── AI Import bar ───────────────────────────────────────── */
-.ai-import-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: var(--bg-card);
-  border: 1px dashed var(--border-mid);
-  border-radius: var(--r-lg);
-  transition: border-color var(--t), background var(--t);
-}
-.ai-import-bar:hover { border-color: var(--accent); background: var(--accent-bg); }
-.ai-import-label {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 0.85rem; font-weight: 500; color: var(--accent);
-  cursor: pointer; white-space: nowrap;
-}
-.ai-import-label svg { flex-shrink: 0; }
-.ai-import-hint { font-size: 0.75rem; color: var(--ink-3); }
-.ai-import-label:has(input:disabled) { opacity: 0.6; cursor: not-allowed; }
+/* ── Card variants ──────────────────────────────────────── */
+.card-prompt { border-left:3px solid var(--accent); }
 
-/* ── Loading animation ───────────────────────────────────── */
-.loading { animation: pulse-text 1.5s ease-in-out infinite; }
-@keyframes pulse-text { 0%,100%{opacity:1} 50%{opacity:.4} }
+/* ── Sports score alternating ───────────────────────────── */
+#sports-games .score-card:nth-child(even) { background:var(--bg-input); }
+
+/* ── Responsive ─────────────────────────────────────────── */
+@media(max-width:767px) {
+  html { font-size:14px; }
+  .app { flex-direction:column; }
+  .rail {
+    order:2; position:fixed; bottom:0; left:0; right:0;
+    width:100%; height:56px; flex-direction:row;
+    padding:0; border-top:1px solid rgba(255,255,255,0.08);
+    z-index:100;
+  }
+  .rail-top { flex-direction:row; flex:1; gap:0; align-items:stretch; }
+  .rail-bottom { display:none; }
+  .rail-logo { display:none; }
+  .rail-nav { flex-direction:row; flex:1; gap:0; align-items:stretch; }
+  .rail-btn {
+    flex-direction:column; gap:2px;
+    padding:4px 4px; justify-content:center; align-items:center;
+    flex:1; font-size:0; min-height:44px; border-radius:0;
+  }
+  .rail-btn svg { opacity:0.5; width:20px; height:20px; }
+  .rail-btn.active svg { opacity:1; }
+  .canvas { order:1; padding-bottom:56px; }
+  .top-bar { flex-direction:column; align-items:flex-start; gap:0.4rem; padding:0.65rem 0.85rem; }
+  .tb-center { flex-direction:row; gap:8px; align-items:center; }
+  .tb-clock { font-size:1.25rem; }
+  .tb-right { width:100%; }
+  .tb-pulse { justify-content:flex-start; }
+  .card { padding:0.75rem; }
+  .view { padding:10px 0.75rem 80px; }
+  .shortcut-dock { flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .sd-links { flex-wrap:nowrap; }
+  .cx-clock { font-size:1.9rem; }
+  .timer-display { font-size:2rem; }
+  .focus-timer { font-size:clamp(2.5rem,12vw,4rem); }
+}

@@ -56,7 +56,7 @@ const SPORT_CFG = {
 
 /* ── Defaults ───────────────────────────────────────────── */
 const DEFAULTS = {
-  name:'', city:'Boston', accent:'clay', geminiKey:'',
+  name:'', city:'Boston', accent:'clay',
   leagues:['nba','mlb'], topics:'technology,finance,sports',
   dwGoal:3, wqPref:'quote',
   todos:[], habits:[], goals:[], journalEntries:[], shortcuts:[],
@@ -490,65 +490,38 @@ const Sports = {
 /* ══════════════════════════════════════════════════════════
    NEWS
 ══════════════════════════════════════════════════════════ */
-/* News feed URLs — all HTTPS, tried in order until one works */
-const FEED_SOURCES = {
-  technology: [
-    'https://feeds.bbci.co.uk/news/technology/rss.xml',
-    'https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml',
-  ],
-  finance: [
-    'https://feeds.bbci.co.uk/news/business/rss.xml',
-    'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml',
-  ],
-  sports: [
-    'https://feeds.bbci.co.uk/sport/rss.xml',
-    'https://rss.nytimes.com/services/xml/rss/nyt/Sports.xml',
-  ],
-  science: [
-    'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml',
-    'https://rss.nytimes.com/services/xml/rss/nyt/Science.xml',
-  ],
-  default: [
-    'https://feeds.bbci.co.uk/news/rss.xml',
-    'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml',
-  ]
+const FEED_URLS = {
+  technology: 'https://feeds.bbci.co.uk/news/technology/rss.xml',
+  finance:    'https://feeds.bbci.co.uk/news/business/rss.xml',
+  sports:     'https://feeds.bbci.co.uk/sport/rss.xml',
+  default:    'https://feeds.bbci.co.uk/news/rss.xml'
 };
-const PROXY = 'https://api.allorigins.win/get?url=';
 
 const NewsWidget = {
   async refresh(){
     const el=$('news-list'); if(!el) return;
     el.innerHTML='<div class="skel-block"><div class="skel skel-line"></div><div class="skel skel-line" style="width:85%"></div><div class="skel skel-line" style="width:90%"></div></div>';
     const topic=(S.topics||'').split(',')[0].trim().toLowerCase();
-    const feeds=FEED_SOURCES[topic]||FEED_SOURCES.default;
+    const feedUrl=FEED_URLS[topic]||FEED_URLS.default;
     const topicEl=$('news-topic'); if(topicEl) topicEl.textContent=topic||'Top news';
 
-    /* Try each feed URL in order */
-    for(const feedUrl of feeds){
-      try {
-        const r=await fetch(PROXY+encodeURIComponent(feedUrl));
-        if(!r.ok) continue;
-        const data=await r.json();
-        if(!data.contents||data.contents.includes('error')||data.contents.length<100) continue;
-        const doc=new DOMParser().parseFromString(data.contents,'text/xml');
-        const items=[...doc.querySelectorAll('item')].slice(0,7);
-        if(!items.length) continue;
-        el.innerHTML=items.map(item=>{
-          const title=item.querySelector('title')?.textContent?.trim()||'Untitled';
-          const link=item.querySelector('link')?.textContent?.trim()||'#';
-          const pub=item.querySelector('pubDate')?.textContent||'';
-          return `<div class="news-item"><a href="${esc(link)}" target="_blank" rel="noopener">${esc(title)}</a><div class="news-src">${this.ago(pub)}</div></div>`;
-        }).join('');
-        return; /* success — stop trying */
-      } catch { continue; }
+    try {
+      const r=await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}&count=7&api_key=public`);
+      if(!r.ok) throw new Error('rss2json failed');
+      const data=await r.json();
+      if(data.status!=='ok'||!data.items?.length) throw new Error('No items');
+      el.innerHTML=data.items.map(item=>`
+        <div class="news-item">
+          <a href="${esc(item.link)}" target="_blank" rel="noopener">${esc(item.title)}</a>
+          <div class="news-src">${this.ago(item.pubDate)}</div>
+        </div>`).join('');
+    } catch {
+      el.innerHTML=`<p class="empty-msg" style="line-height:1.6">
+        <a href="https://www.bbc.com/news" target="_blank" style="color:var(--accent)">BBC News ↗</a> ·
+        <a href="https://www.reuters.com" target="_blank" style="color:var(--accent)">Reuters ↗</a> ·
+        <a href="https://apnews.com" target="_blank" style="color:var(--accent)">AP News ↗</a>
+      </p>`;
     }
-    /* All feeds failed */
-    el.innerHTML=`<p class="empty-msg" style="line-height:1.6">
-      Couldn't load news automatically.<br/>
-      <a href="https://www.bbc.com/news" target="_blank" style="color:var(--accent)">BBC News ↗</a> ·
-      <a href="https://www.reuters.com" target="_blank" style="color:var(--accent)">Reuters ↗</a> ·
-      <a href="https://apnews.com" target="_blank" style="color:var(--accent)">AP News ↗</a>
-    </p>`;
   },
   ago(s){
     if(!s) return '';
@@ -914,181 +887,7 @@ const ZenMode = {
   }
 };
 
-/* ══════════════════════════════════════════════════════════
-   AI BRIEF — powered by Google Gemini (free, no backend needed)
-   Get a free key at: https://aistudio.google.com
-══════════════════════════════════════════════════════════ */
-const Brief = {
-  async fetch(){
-    const el=$('brief-text'); if(!el) return;
-    const key=S.geminiKey;
-    if(!key){
-      el.innerHTML='Add a free Gemini API key in Settings for your AI daily brief. <a href="https://aistudio.google.com" target="_blank" style="color:var(--accent)">Get one free →</a>';
-      return;
-    }
-    el.innerHTML='<span class="loading">Generating your brief…</span>';
-    const todos=S.todos.filter(t=>!t.done).map(t=>t.text).join(', ')||'none';
-    const goals=S.goals.filter(g=>!g.done).slice(0,2).map(g=>g.text).join(', ')||'none';
-    const h=new Date().getHours();
-    const tod=h<12?'morning':h<17?'afternoon':'evening';
-    const wx=Weather.get();
-    const wxLine=wx?`Current weather: ${wx.temp}°F, ${wx.desc}.`:'';
-    const prompt=`Write a warm, 2-sentence ${tod} brief for ${S.name||'the user'} in ${S.city}. Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}. ${wxLine} Open tasks: ${todos}. Active goals: ${goals}. End with one sharp, specific focus recommendation. No bullet points. No greeting prefix like "Good morning".`;
-    try {
-      const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${key}`;
-      const r=await fetch(url,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          contents:[{parts:[{text:prompt}]}],
-          generationConfig:{maxOutputTokens:120,temperature:0.7}
-        })
-      });
-      if(!r.ok){
-        const err=await r.json();
-        throw new Error(err.error?.message||'Gemini API error');
-      }
-      const d=await r.json();
-      const text=d.candidates?.[0]?.content?.parts?.[0]?.text;
-      if(!text) throw new Error('No response from Gemini');
-      el.textContent=text.trim();
-    } catch(e) {
-      console.warn('Brief failed:',e);
-      el.textContent='Couldn\'t generate brief — check your Gemini key in Settings.';
-    }
-  }
-};
 
-/* ══════════════════════════════════════════════════════════
-   AI IMPORT — extract tasks/goals from image or PDF
-   Uses Gemini Vision (free tier) for multimodal understanding
-══════════════════════════════════════════════════════════ */
-const AIImport = {
-  async handleFile(input){
-    const file=input.files[0]; if(!file) return;
-    const key=S.geminiKey;
-    if(!key){
-      alert('Add your free Gemini API key in Settings first. Get one at aistudio.google.com');
-      input.value=''; return;
-    }
-
-    /* Show loading state */
-    const btn=$('ai-import-btn');
-    if(btn){btn.textContent='Analyzing…';btn.disabled=true;}
-
-    try {
-      /* Read file as base64 */
-      const base64=await this.toBase64(file);
-      const mimeType=file.type||'image/jpeg';
-
-      /* Build Gemini Vision request */
-      const prompt=`Analyze this image or document and extract ALL tasks, to-do items, goals, and action items you can find.
-
-Return ONLY a valid JSON object in this exact format, no markdown, no explanation:
-{
-  "tasks": ["task 1", "task 2"],
-  "shortGoals": ["short term goal 1"],
-  "longGoals": ["long term goal 1"]
-}
-
-Rules:
-- "tasks" = specific actionable items, to-dos, checklist items
-- "shortGoals" = goals for this week or month
-- "longGoals" = goals for this year or beyond
-- If something could be either a task or goal, put it in tasks
-- Include everything you can find, even partial text
-- Return empty arrays if none found for a category`;
-
-      const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${key}`;
-      const body={
-        contents:[{parts:[
-          {text:prompt},
-          {inline_data:{mime_type:mimeType,data:base64}}
-        ]}],
-        generationConfig:{maxOutputTokens:1000,temperature:0.1}
-      };
-
-      /* PDFs need a different approach — send as document part */
-      if(mimeType==='application/pdf'){
-        body.contents[0].parts[1]={inline_data:{mime_type:'application/pdf',data:base64}};
-      }
-
-      const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      if(!r.ok){const err=await r.json();throw new Error(err.error?.message||'Gemini error');}
-      const d=await r.json();
-
-      /* Parse response */
-      let text=d.candidates?.[0]?.content?.parts?.[0]?.text||'';
-      /* Strip markdown code fences if present */
-      text=text.replace(/```json[\s\S]*?```|```/g,'').trim();
-      const parsed=JSON.parse(text);
-
-      /* Import into app */
-      const results=this.importParsed(parsed);
-      this.showResults(results);
-
-    } catch(e){
-      console.warn('AI import failed:',e);
-      alert(`Import failed: ${e.message}
-
-Make sure your Gemini API key is correct and the file is a clear image or PDF.`);
-    } finally {
-      if(btn){btn.textContent='Import from image/PDF';btn.disabled=false;}
-      input.value='';
-    }
-  },
-
-  toBase64(file){
-    return new Promise((resolve,reject)=>{
-      const reader=new FileReader();
-      reader.onload=e=>resolve(e.target.result.split(',')[1]);
-      reader.onerror=reject;
-      reader.readAsDataURL(file);
-    });
-  },
-
-  importParsed(parsed){
-    let tasksAdded=0, goalsAdded=0;
-    /* Add tasks */
-    (parsed.tasks||[]).forEach(text=>{
-      if(!text?.trim()) return;
-      S.todos.push({text:text.trim(),done:false,id:Date.now()+Math.random(),tag:'task'});
-      tasksAdded++;
-    });
-    /* Add short-term goals */
-    (parsed.shortGoals||[]).forEach(text=>{
-      if(!text?.trim()) return;
-      S.goals.push({text:text.trim(),type:'short',due:'',progress:0,done:false,created:Date.now()});
-      goalsAdded++;
-    });
-    /* Add long-term goals */
-    (parsed.longGoals||[]).forEach(text=>{
-      if(!text?.trim()) return;
-      S.goals.push({text:text.trim(),type:'long',due:'',progress:0,done:false,created:Date.now()});
-      goalsAdded++;
-    });
-    save();
-    Todo.render();
-    Goals.render();
-    GoalRings.render();
-    DailySummary.update();
-    return {tasksAdded,goalsAdded};
-  },
-
-  showResults({tasksAdded,goalsAdded}){
-    const total=tasksAdded+goalsAdded;
-    if(total===0){
-      alert('No tasks or goals found in the image. Try a clearer photo or a different file.');
-      return;
-    }
-    /* Show a nice toast notification */
-    const toast=document.createElement('div');
-    toast.style.cssText='position:fixed;bottom:2rem;right:2rem;background:var(--accent);color:#fff;padding:12px 20px;border-radius:10px;font-size:.9rem;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.2);animation:fadein .2s ease';
-    toast.textContent=`✓ Imported ${tasksAdded} task${tasksAdded!==1?'s':''} and ${goalsAdded} goal${goalsAdded!==1?'s':''}`;
-    document.body.appendChild(toast);
-    setTimeout(()=>toast.remove(),3500);
-  }
-};
 
 /* ══════════════════════════════════════════════════════════
    SETTINGS
@@ -1099,7 +898,6 @@ const Settings = {
     $('s-city').value=S.city;
     $('s-topics').value=S.topics;
     $('s-dwgoal').value=S.dwGoal||3;
-    $('s-gemini').value=S.geminiKey||'';
     $('s-wq').value=S.wqPref||'quote';
     ['nba','nfl','mlb','nhl'].forEach(lg=>{const e=$(`sl-${lg}`);if(e)e.checked=(S.leagues||[]).includes(lg);});
     document.querySelectorAll('.s-accents .ob-acc').forEach(b=>b.classList.toggle('active',b.dataset.accent===S.accent));
@@ -1117,12 +915,11 @@ const Settings = {
     S.city   =$('s-city').value.trim()||'Boston';
     S.topics =$('s-topics').value.trim();
     S.dwGoal =parseInt($('s-dwgoal').value)||3;
-    S.geminiKey=$('s-gemini').value.trim();
     S.wqPref =$('s-wq').value;
     S.leagues=['nba','nfl','mlb','nhl'].filter(lg=>$(`sl-${lg}`)?.checked);
     if(!S.leagues.length)S.leagues=['nba'];
     save();
-    Weather.init(); Brief.fetch(); Sports.refresh();
+    Weather.init(); Sports.refresh();
     Timer.syncFocus();
     this.close();
   },
@@ -1143,7 +940,6 @@ function launch(){
     Weather.init();
     Shortcuts.render();
     Capture.init();
-    Brief.fetch();
     Todo.render();
     Habits.render();
     Goals.render();
