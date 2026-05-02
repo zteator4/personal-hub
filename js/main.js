@@ -490,37 +490,65 @@ const Sports = {
 /* ══════════════════════════════════════════════════════════
    NEWS
 ══════════════════════════════════════════════════════════ */
-const FEEDS={
-  technology:'http://feeds.arstechnica.com/arstechnica/index',
-  finance:'https://feeds.reuters.com/reuters/businessNews',
-  sports:'http://feeds.bbci.co.uk/sport/rss.xml',
-  science:'https://www.sciencedaily.com/rss/all.xml',
-  default:'http://feeds.bbci.co.uk/news/rss.xml'
+/* News feed URLs — all HTTPS, tried in order until one works */
+const FEED_SOURCES = {
+  technology: [
+    'https://feeds.bbci.co.uk/news/technology/rss.xml',
+    'https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml',
+  ],
+  finance: [
+    'https://feeds.bbci.co.uk/news/business/rss.xml',
+    'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml',
+  ],
+  sports: [
+    'https://feeds.bbci.co.uk/sport/rss.xml',
+    'https://rss.nytimes.com/services/xml/rss/nyt/Sports.xml',
+  ],
+  science: [
+    'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml',
+    'https://rss.nytimes.com/services/xml/rss/nyt/Science.xml',
+  ],
+  default: [
+    'https://feeds.bbci.co.uk/news/rss.xml',
+    'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml',
+  ]
 };
+const PROXY = 'https://api.allorigins.win/get?url=';
+
 const NewsWidget = {
   async refresh(){
     const el=$('news-list'); if(!el) return;
     el.innerHTML='<div class="skel-block"><div class="skel skel-line"></div><div class="skel skel-line" style="width:85%"></div><div class="skel skel-line" style="width:90%"></div></div>';
     const topic=(S.topics||'').split(',')[0].trim().toLowerCase();
-    const feed=FEEDS[topic]||FEEDS.default;
+    const feeds=FEED_SOURCES[topic]||FEED_SOURCES.default;
     const topicEl=$('news-topic'); if(topicEl) topicEl.textContent=topic||'Top news';
-    try {
-      const r=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(feed)}`);
-      if(!r.ok) throw 0;
-      const {contents}=await r.json();
-      const doc=new DOMParser().parseFromString(contents,'text/xml');
-      const items=[...doc.querySelectorAll('item')].slice(0,7);
-      if(!items.length) throw 0;
-      el.innerHTML=items.map(item=>{
-        const title=item.querySelector('title')?.textContent?.trim()||'Untitled';
-        const link=item.querySelector('link')?.textContent?.trim()||'#';
-        const pub=item.querySelector('pubDate')?.textContent||'';
-        const ago=this.ago(pub);
-        return `<div class="news-item"><a href="${esc(link)}" target="_blank" rel="noopener">${esc(title)}</a><div class="news-src">${ago}</div></div>`;
-      }).join('');
-    } catch {
-      el.innerHTML='<p class="empty-msg">Couldn\'t load news. Try refreshing.</p>';
+
+    /* Try each feed URL in order */
+    for(const feedUrl of feeds){
+      try {
+        const r=await fetch(PROXY+encodeURIComponent(feedUrl));
+        if(!r.ok) continue;
+        const data=await r.json();
+        if(!data.contents||data.contents.includes('error')||data.contents.length<100) continue;
+        const doc=new DOMParser().parseFromString(data.contents,'text/xml');
+        const items=[...doc.querySelectorAll('item')].slice(0,7);
+        if(!items.length) continue;
+        el.innerHTML=items.map(item=>{
+          const title=item.querySelector('title')?.textContent?.trim()||'Untitled';
+          const link=item.querySelector('link')?.textContent?.trim()||'#';
+          const pub=item.querySelector('pubDate')?.textContent||'';
+          return `<div class="news-item"><a href="${esc(link)}" target="_blank" rel="noopener">${esc(title)}</a><div class="news-src">${this.ago(pub)}</div></div>`;
+        }).join('');
+        return; /* success — stop trying */
+      } catch { continue; }
     }
+    /* All feeds failed */
+    el.innerHTML=`<p class="empty-msg" style="line-height:1.6">
+      Couldn't load news automatically.<br/>
+      <a href="https://www.bbc.com/news" target="_blank" style="color:var(--accent)">BBC News ↗</a> ·
+      <a href="https://www.reuters.com" target="_blank" style="color:var(--accent)">Reuters ↗</a> ·
+      <a href="https://apnews.com" target="_blank" style="color:var(--accent)">AP News ↗</a>
+    </p>`;
   },
   ago(s){
     if(!s) return '';
@@ -907,7 +935,7 @@ const Brief = {
     const wxLine=wx?`Current weather: ${wx.temp}°F, ${wx.desc}.`:'';
     const prompt=`Write a warm, 2-sentence ${tod} brief for ${S.name||'the user'} in ${S.city}. Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}. ${wxLine} Open tasks: ${todos}. Active goals: ${goals}. End with one sharp, specific focus recommendation. No bullet points. No greeting prefix like "Good morning".`;
     try {
-      const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+      const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${key}`;
       const r=await fetch(url,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -971,7 +999,7 @@ Rules:
 - Include everything you can find, even partial text
 - Return empty arrays if none found for a category`;
 
-      const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+      const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${key}`;
       const body={
         contents:[{parts:[
           {text:prompt},
