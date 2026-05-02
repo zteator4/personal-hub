@@ -4,8 +4,6 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MyDayDeck</title>
-  <link rel="icon" type="image/png" href="images/favicon.png"/>
-  <link rel="apple-touch-icon" href="images/favicon.png"/>
   <link rel="stylesheet" href="css/style.css"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -207,6 +205,16 @@
             <span class="brief-star">✦</span>
             <span id="brief-text">Generating your daily brief…</span>
             <button class="brief-refresh" onclick="Brief.fetch()">↺</button>
+          </div>
+
+          <!-- AI Import -->
+          <div class="ai-import-bar">
+            <label class="ai-import-label" id="ai-import-btn">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Import tasks from image or PDF
+              <input type="file" accept="image/*,.pdf" style="display:none" onchange="AIImport.handleFile(this)"/>
+            </label>
+            <span class="ai-import-hint">Gemini Vision reads your handwritten lists, screenshots, or PDFs</span>
           </div>
 
           <!-- Daily Checklist -->
@@ -444,9 +452,17 @@
       </div>
     </section>
     <section class="s-sec">
-      <h3>AI Brief <span class="s-note">(optional)</span></h3>
-      <p class="s-hint">Generates a personalized daily summary. <a href="https://platform.openai.com" target="_blank">Get a free key →</a></p>
-      <label class="s-field"><span>OpenAI key</span><input type="password" id="s-openai" placeholder="sk-…"/></label>
+      <h3>AI Features <span class="s-note">(optional)</span></h3>
+      <p class="s-hint">
+        Uses <strong>Google Gemini</strong> for your daily brief and image import.
+        Get a free key (no credit card needed) at
+        <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a> →
+      </p>
+      <label class="s-field">
+        <span>Gemini API key</span>
+        <input type="password" id="s-gemini" placeholder="AIza…"/>
+      </label>
+      <p class="s-hint" style="margin-top:2px">Your key is stored only in your browser — never sent anywhere except Google's API.</p>
     </section>
     <div class="s-footer">
       <button class="btn-primary" onclick="Settings.save()">Save changes</button>
@@ -455,22 +471,6 @@
   </div>
 </div>
 <div class="settings-backdrop hidden" id="settings-backdrop" onclick="Settings.close()"></div>
-
-<!-- APP MODAL -->
-<div class="app-modal-backdrop hidden" id="app-modal-backdrop" onclick="Modal.close()"></div>
-<div class="app-modal hidden" id="app-modal" role="dialog" aria-modal="true">
-  <div class="app-modal-card">
-    <div class="app-modal-hdr">
-      <h3 class="app-modal-title" id="app-modal-title"></h3>
-      <button class="icon-x" onclick="Modal.close()">✕</button>
-    </div>
-    <div class="app-modal-body" id="app-modal-body"></div>
-    <div class="app-modal-footer" id="app-modal-footer"></div>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div class="app-toast hidden" id="app-toast"></div>
 
 <script src="js/main.js"></script>
 </body>

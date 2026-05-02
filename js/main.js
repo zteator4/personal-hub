@@ -56,7 +56,7 @@ const SPORT_CFG = {
 
 /* ── Defaults ───────────────────────────────────────────── */
 const DEFAULTS = {
-  name:'', city:'Boston', accent:'clay', openai:'',
+  name:'', city:'Boston', accent:'clay', geminiKey:'',
   leagues:['nba','mlb'], topics:'technology,finance,sports',
   dwGoal:3, wqPref:'quote',
   todos:[], habits:[], goals:[], journalEntries:[], shortcuts:[],
@@ -69,110 +69,6 @@ let S = {};
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
-function formatTimeInput(val) {
-  if (!val) return '';
-  const [h, m] = val.split(':');
-  const hr = parseInt(h, 10);
-  return `${hr > 12 ? hr - 12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
-}
-
-/* ══════════════════════════════════════════════════════════
-   MODAL SYSTEM
-══════════════════════════════════════════════════════════ */
-const Modal = {
-  _onSubmit: null,
-  _onConfirm: null,
-  _toastTimer: null,
-
-  close() {
-    $('app-modal').classList.add('hidden');
-    $('app-modal-backdrop').classList.add('hidden');
-    this._onSubmit = null;
-    this._onConfirm = null;
-  },
-
-  _open(title, bodyHTML, footerHTML) {
-    $('app-modal-title').textContent = title;
-    $('app-modal-body').innerHTML = bodyHTML;
-    $('app-modal-footer').innerHTML = footerHTML;
-    $('app-modal').classList.remove('hidden');
-    $('app-modal-backdrop').classList.remove('hidden');
-    requestAnimationFrame(() => {
-      const first = $('app-modal-body').querySelector('input,select,textarea');
-      if (first) first.focus();
-    });
-  },
-
-  form(title, fields, onSubmit, submitLabel = 'Save') {
-    const bodyHTML = fields.map(f => {
-      const optLabel = f.required === false ? ' <em>(optional)</em>' : '';
-      if (f.type === 'select') {
-        return `<label class="am-field"><span>${f.label}</span>
-          <select class="inp-sunken styled-select" id="amf-${f.id}">
-            ${f.options.map(o => `<option value="${esc(o.value)}"${(f.default||'')===o.value?' selected':''}>${esc(o.label)}</option>`).join('')}
-          </select></label>`;
-      }
-      if (f.type === 'range') {
-        const val = f.default || 0;
-        return `<label class="am-field"><span>${f.label}</span>
-          <div class="am-range-wrap">
-            <input type="range" class="am-range" id="amf-${f.id}" min="${f.min||0}" max="${f.max||100}" value="${val}"
-              oninput="$('amf-${f.id}-val').textContent=this.value+'%'"/>
-            <span class="am-range-val" id="amf-${f.id}-val">${val}%</span>
-          </div></label>`;
-      }
-      const typeAttr = f.type || 'text';
-      const ph = f.placeholder ? ` placeholder="${esc(f.placeholder)}"` : '';
-      const dv = f.default != null ? ` value="${esc(String(f.default))}"` : '';
-      const extra = (f.min != null ? ` min="${f.min}"` : '') + (f.max != null ? ` max="${f.max}"` : '');
-      return `<label class="am-field"><span>${f.label}${optLabel}</span>
-        <input type="${typeAttr}" class="inp-sunken" id="amf-${f.id}"${ph}${dv}${extra}/></label>`;
-    }).join('');
-
-    this._open(title, bodyHTML,
-      `<button class="btn-ghost" onclick="Modal.close()">Cancel</button>
-       <button class="btn-primary" onclick="Modal._submit()">${esc(submitLabel)}</button>`
-    );
-
-    this._onSubmit = () => {
-      const values = {};
-      for (const f of fields) { values[f.id] = $(`amf-${f.id}`)?.value ?? ''; }
-      if (onSubmit(values) !== false) this.close();
-    };
-
-    $('app-modal-body').querySelectorAll('input').forEach(inp => {
-      inp.addEventListener('keydown', e => { if (e.key === 'Enter') this._submit(); });
-    });
-  },
-
-  _submit() { if (this._onSubmit) this._onSubmit(); },
-
-  confirm(title, message, onConfirm, danger = false, confirmLabel = null) {
-    const btnLabel = confirmLabel || (danger ? 'Delete' : 'Confirm');
-    const btnClass = danger ? 'btn-danger' : 'btn-primary';
-    this._open(title,
-      `<p class="am-confirm-msg">${esc(message)}</p>`,
-      `<button class="btn-ghost" onclick="Modal.close()">Cancel</button>
-       <button class="${btnClass}" onclick="Modal._confirmYes()">${esc(btnLabel)}</button>`
-    );
-    this._onConfirm = () => { onConfirm(); this.close(); };
-  },
-
-  _confirmYes() { if (this._onConfirm) this._onConfirm(); },
-
-  toast(msg, duration = 2500) {
-    const el = $('app-toast'); if (!el) return;
-    el.textContent = msg;
-    el.classList.remove('hidden');
-    requestAnimationFrame(() => el.classList.add('visible'));
-    clearTimeout(this._toastTimer);
-    this._toastTimer = setTimeout(() => {
-      el.classList.remove('visible');
-      setTimeout(() => el.classList.add('hidden'), 300);
-    }, duration);
-  }
-};
-
 function merge(a,b) {
   const o={...a};
   for(const k of Object.keys(b||{})){
@@ -239,9 +135,9 @@ const Clock = {
   start(){this.tick();setInterval(()=>this.tick(),1000);},
   tick(){
     const now=new Date();
-    const h=now.getHours(),m=String(now.getMinutes()).padStart(2,'0'),s=String(now.getSeconds()).padStart(2,'0');
+    const h=now.getHours(),m=String(now.getMinutes()).padStart(2,'0');
     const ampm=h>=12?'PM':'AM',h12=((h%12)||12);
-    const t=`${h12}:${m}:${s} ${ampm}`;
+    const t=`${h12}:${m} ${ampm}`;
     const tc=$('tb-clock'); if(tc) tc.textContent=t;
     const cc=$('cx-clock'); if(cc) cc.textContent=t;
     const zc=$('zen-timer'); if(zc&&!Timer.running) {} // zen timer updates from Timer
@@ -345,14 +241,11 @@ const Shortcuts = {
       </a>`).join('');
   },
   addPrompt(){
-    Modal.form('Add Shortcut', [
-      {id:'url', label:'URL', type:'text', placeholder:'https://github.com', required:true},
-      {id:'label', label:'Label', type:'text', placeholder:'GitHub', required:true}
-    ], ({url, label}) => {
-      if (!url?.trim() || !label?.trim()) return false;
-      S.shortcuts.push({url:url.trim(), label:label.trim()});
-      save(); this.render();
-    }, 'Add Shortcut');
+    const url=prompt('Enter URL (e.g. https://github.com):'); if(!url?.trim()) return;
+    const label=prompt('Label:',url.replace(/https?:\/\/(www\.)?/,'').split('/')[0]);
+    if(!label) return;
+    S.shortcuts.push({url:url.trim(),label:label.trim()});
+    save(); this.render();
   },
   remove(i){S.shortcuts.splice(i,1);save();this.render();}
 };
@@ -806,17 +699,10 @@ const Goals = {
     }).join('');
   },
   addPrompt(){
-    Modal.form('Add Goal', [
-      {id:'text', label:'Goal', type:'text', placeholder:'e.g. Run a 5K', required:true},
-      {id:'type', label:'Timeframe', type:'select', options:[
-        {value:'short', label:'Short-term (this week / month)'},
-        {value:'long',  label:'Long-term (this year / beyond)'}
-      ], default:'short'},
-      {id:'due', label:'Due date', type:'date', required:false}
-    ], ({text, type, due}) => {
-      if (!text?.trim()) return false;
-      this.addItem(text, type, due);
-    }, 'Add Goal');
+    const text=prompt('Goal:'); if(!text) return;
+    const type=(prompt('Type: short or long?','short')||'short')==='long'?'long':'short';
+    const due=prompt('Due date (optional):')||'';
+    this.addItem(text,type,due);
   },
   addItem(text,type,due=''){
     S.goals.push({text:text.trim(),type,due,progress:0,done:false,created:Date.now()});
@@ -824,18 +710,11 @@ const Goals = {
   },
   toggleDone(i){S.goals[i].done=!S.goals[i].done;save();this.render();GoalRings.render();},
   setProgress(i){
-    Modal.form('Update Progress', [
-      {id:'progress', label:'Progress', type:'range', min:0, max:100, default:S.goals[i].progress||0}
-    ], ({progress}) => {
-      S.goals[i].progress = Math.min(100, Math.max(0, parseInt(progress)||0));
-      save(); this.render(); GoalRings.render(); DailySummary.update();
-    }, 'Update');
+    const p=prompt('Progress 0–100:',S.goals[i].progress||0); if(p===null) return;
+    S.goals[i].progress=Math.min(100,Math.max(0,parseInt(p)||0));
+    save(); this.render(); GoalRings.render(); DailySummary.update();
   },
-  remove(i){
-    Modal.confirm('Remove Goal', 'Remove this goal? This cannot be undone.', () => {
-      S.goals.splice(i,1); save(); this.render(); GoalRings.render();
-    }, true, 'Remove');
-  }
+  remove(i){if(!confirm('Remove this goal?'))return;S.goals.splice(i,1);save();this.render();GoalRings.render();}
 };
 
 /* ══════════════════════════════════════════════════════════
@@ -934,28 +813,18 @@ const Cal = {
   },
   closePanel(){const p=$('cal-panel');if(p)p.classList.add('hidden');this._sel=null;},
   addEvent(){
-    const today = new Date().toISOString().split('T')[0];
-    Modal.form('Add Event', [
-      {id:'date',  label:'Date',  type:'date', default:today, required:true},
-      {id:'title', label:'Title', type:'text', placeholder:'e.g. Team meeting', required:true},
-      {id:'time',  label:'Time',  type:'time', required:false}
-    ], ({date, title, time}) => {
-      if (!date || !title?.trim()) return false;
-      S.calEvents.push({date, title:title.trim(), time:formatTimeInput(time), notes:'', id:Date.now()});
-      save(); this.render(); if(this._sel===date) this.select(date);
-    }, 'Add Event');
+    const ds=prompt('Date (YYYY-MM-DD):',new Date().toISOString().split('T')[0]); if(!ds) return;
+    const title=prompt('Title:'); if(!title) return;
+    const time=prompt('Time (optional):')||'';
+    S.calEvents.push({date:ds,title:title.trim(),time,notes:'',id:Date.now()});
+    save(); this.render(); if(this._sel===ds)this.select(ds);
   },
   addEventOnDate(){
-    const ds = this._sel || new Date().toISOString().split('T')[0];
-    const displayDate = new Date(ds+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric'});
-    Modal.form(`Add Event — ${displayDate}`, [
-      {id:'title', label:'Title', type:'text', placeholder:'e.g. Team meeting', required:true},
-      {id:'time',  label:'Time',  type:'time', required:false}
-    ], ({title, time}) => {
-      if (!title?.trim()) return false;
-      S.calEvents.push({date:ds, title:title.trim(), time:formatTimeInput(time), notes:'', id:Date.now()});
-      save(); this.render(); this.select(ds);
-    }, 'Add Event');
+    const ds=this._sel||new Date().toISOString().split('T')[0];
+    const title=prompt('Event title:'); if(!title) return;
+    const time=prompt('Time (optional):')||'';
+    S.calEvents.push({date:ds,title:title.trim(),time,notes:'',id:Date.now()});
+    save(); this.render(); this.select(ds);
   },
   removeEvent(i){S.calEvents.splice(i,1);save();this.render();if(this._sel)this.select(this._sel);},
   prevMonth(){if(this._m===0){this._m=11;this._y--;}else this._m--;this.render();},
@@ -968,8 +837,8 @@ const Cal = {
         const evts=this.parseICS(e.target.result);
         S.calEvents=[...S.calEvents,...evts];
         save(); this.render();
-        Modal.toast(`Imported ${evts.length} event(s) ✓`);
-      }catch(err){Modal.toast('Error parsing .ics file.');}
+        alert(`Imported ${evts.length} event(s)!`);
+      }catch(err){alert('Error parsing .ics file.');}
     };
     reader.readAsText(file); input.value='';
   },
@@ -1018,27 +887,178 @@ const ZenMode = {
 };
 
 /* ══════════════════════════════════════════════════════════
-   AI BRIEF
+   AI BRIEF — powered by Google Gemini (free, no backend needed)
+   Get a free key at: https://aistudio.google.com
 ══════════════════════════════════════════════════════════ */
 const Brief = {
   async fetch(){
     const el=$('brief-text'); if(!el) return;
-    const key=S.openai;
-    if(!key){el.textContent='Add an OpenAI key in Settings for a personalized daily brief.';return;}
-    el.innerHTML='<span style="animation:shimmer 1.5s infinite">Generating…</span>';
+    const key=S.geminiKey;
+    if(!key){
+      el.innerHTML='Add a free Gemini API key in Settings for your AI daily brief. <a href="https://aistudio.google.com" target="_blank" style="color:var(--accent)">Get one free →</a>';
+      return;
+    }
+    el.innerHTML='<span class="loading">Generating your brief…</span>';
     const todos=S.todos.filter(t=>!t.done).map(t=>t.text).join(', ')||'none';
+    const goals=S.goals.filter(g=>!g.done).slice(0,2).map(g=>g.text).join(', ')||'none';
     const h=new Date().getHours();
     const tod=h<12?'morning':h<17?'afternoon':'evening';
-    const prompt=`2-sentence ${tod} brief for ${S.name||'the user'} in ${S.city}. Date: ${new Date().toDateString()}. Open tasks: ${todos}. Warm, direct, one focus tip. No bullets or greetings.`;
+    const wx=Weather.get();
+    const wxLine=wx?`Current weather: ${wx.temp}°F, ${wx.desc}.`:'';
+    const prompt=`Write a warm, 2-sentence ${tod} brief for ${S.name||'the user'} in ${S.city}. Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}. ${wxLine} Open tasks: ${todos}. Active goals: ${goals}. End with one sharp, specific focus recommendation. No bullet points. No greeting prefix like "Good morning".`;
     try {
-      const r=await fetch('https://api.openai.com/v1/chat/completions',{
-        method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
-        body:JSON.stringify({model:'gpt-4o-mini',max_tokens:90,messages:[{role:'user',content:prompt}]})
+      const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+      const r=await fetch(url,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          contents:[{parts:[{text:prompt}]}],
+          generationConfig:{maxOutputTokens:120,temperature:0.7}
+        })
       });
-      if(!r.ok) throw 0;
+      if(!r.ok){
+        const err=await r.json();
+        throw new Error(err.error?.message||'Gemini API error');
+      }
       const d=await r.json();
-      el.textContent=d.choices[0].message.content.trim();
-    } catch { el.textContent='Couldn\'t generate brief — check your OpenAI key in Settings.'; }
+      const text=d.candidates?.[0]?.content?.parts?.[0]?.text;
+      if(!text) throw new Error('No response from Gemini');
+      el.textContent=text.trim();
+    } catch(e) {
+      console.warn('Brief failed:',e);
+      el.textContent='Couldn\'t generate brief — check your Gemini key in Settings.';
+    }
+  }
+};
+
+/* ══════════════════════════════════════════════════════════
+   AI IMPORT — extract tasks/goals from image or PDF
+   Uses Gemini Vision (free tier) for multimodal understanding
+══════════════════════════════════════════════════════════ */
+const AIImport = {
+  async handleFile(input){
+    const file=input.files[0]; if(!file) return;
+    const key=S.geminiKey;
+    if(!key){
+      alert('Add your free Gemini API key in Settings first. Get one at aistudio.google.com');
+      input.value=''; return;
+    }
+
+    /* Show loading state */
+    const btn=$('ai-import-btn');
+    if(btn){btn.textContent='Analyzing…';btn.disabled=true;}
+
+    try {
+      /* Read file as base64 */
+      const base64=await this.toBase64(file);
+      const mimeType=file.type||'image/jpeg';
+
+      /* Build Gemini Vision request */
+      const prompt=`Analyze this image or document and extract ALL tasks, to-do items, goals, and action items you can find.
+
+Return ONLY a valid JSON object in this exact format, no markdown, no explanation:
+{
+  "tasks": ["task 1", "task 2"],
+  "shortGoals": ["short term goal 1"],
+  "longGoals": ["long term goal 1"]
+}
+
+Rules:
+- "tasks" = specific actionable items, to-dos, checklist items
+- "shortGoals" = goals for this week or month
+- "longGoals" = goals for this year or beyond
+- If something could be either a task or goal, put it in tasks
+- Include everything you can find, even partial text
+- Return empty arrays if none found for a category`;
+
+      const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+      const body={
+        contents:[{parts:[
+          {text:prompt},
+          {inline_data:{mime_type:mimeType,data:base64}}
+        ]}],
+        generationConfig:{maxOutputTokens:1000,temperature:0.1}
+      };
+
+      /* PDFs need a different approach — send as document part */
+      if(mimeType==='application/pdf'){
+        body.contents[0].parts[1]={inline_data:{mime_type:'application/pdf',data:base64}};
+      }
+
+      const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(!r.ok){const err=await r.json();throw new Error(err.error?.message||'Gemini error');}
+      const d=await r.json();
+
+      /* Parse response */
+      let text=d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+      /* Strip markdown code fences if present */
+      text=text.replace(/```json[\s\S]*?```|```/g,'').trim();
+      const parsed=JSON.parse(text);
+
+      /* Import into app */
+      const results=this.importParsed(parsed);
+      this.showResults(results);
+
+    } catch(e){
+      console.warn('AI import failed:',e);
+      alert(`Import failed: ${e.message}
+
+Make sure your Gemini API key is correct and the file is a clear image or PDF.`);
+    } finally {
+      if(btn){btn.textContent='Import from image/PDF';btn.disabled=false;}
+      input.value='';
+    }
+  },
+
+  toBase64(file){
+    return new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onload=e=>resolve(e.target.result.split(',')[1]);
+      reader.onerror=reject;
+      reader.readAsDataURL(file);
+    });
+  },
+
+  importParsed(parsed){
+    let tasksAdded=0, goalsAdded=0;
+    /* Add tasks */
+    (parsed.tasks||[]).forEach(text=>{
+      if(!text?.trim()) return;
+      S.todos.push({text:text.trim(),done:false,id:Date.now()+Math.random(),tag:'task'});
+      tasksAdded++;
+    });
+    /* Add short-term goals */
+    (parsed.shortGoals||[]).forEach(text=>{
+      if(!text?.trim()) return;
+      S.goals.push({text:text.trim(),type:'short',due:'',progress:0,done:false,created:Date.now()});
+      goalsAdded++;
+    });
+    /* Add long-term goals */
+    (parsed.longGoals||[]).forEach(text=>{
+      if(!text?.trim()) return;
+      S.goals.push({text:text.trim(),type:'long',due:'',progress:0,done:false,created:Date.now()});
+      goalsAdded++;
+    });
+    save();
+    Todo.render();
+    Goals.render();
+    GoalRings.render();
+    DailySummary.update();
+    return {tasksAdded,goalsAdded};
+  },
+
+  showResults({tasksAdded,goalsAdded}){
+    const total=tasksAdded+goalsAdded;
+    if(total===0){
+      alert('No tasks or goals found in the image. Try a clearer photo or a different file.');
+      return;
+    }
+    /* Show a nice toast notification */
+    const toast=document.createElement('div');
+    toast.style.cssText='position:fixed;bottom:2rem;right:2rem;background:var(--accent);color:#fff;padding:12px 20px;border-radius:10px;font-size:.9rem;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.2);animation:fadein .2s ease';
+    toast.textContent=`✓ Imported ${tasksAdded} task${tasksAdded!==1?'s':''} and ${goalsAdded} goal${goalsAdded!==1?'s':''}`;
+    document.body.appendChild(toast);
+    setTimeout(()=>toast.remove(),3500);
   }
 };
 
@@ -1051,7 +1071,7 @@ const Settings = {
     $('s-city').value=S.city;
     $('s-topics').value=S.topics;
     $('s-dwgoal').value=S.dwGoal||3;
-    $('s-openai').value=S.openai||'';
+    $('s-gemini').value=S.geminiKey||'';
     $('s-wq').value=S.wqPref||'quote';
     ['nba','nfl','mlb','nhl'].forEach(lg=>{const e=$(`sl-${lg}`);if(e)e.checked=(S.leagues||[]).includes(lg);});
     document.querySelectorAll('.s-accents .ob-acc').forEach(b=>b.classList.toggle('active',b.dataset.accent===S.accent));
@@ -1069,7 +1089,7 @@ const Settings = {
     S.city   =$('s-city').value.trim()||'Boston';
     S.topics =$('s-topics').value.trim();
     S.dwGoal =parseInt($('s-dwgoal').value)||3;
-    S.openai =$('s-openai').value.trim();
+    S.geminiKey=$('s-gemini').value.trim();
     S.wqPref =$('s-wq').value;
     S.leagues=['nba','nfl','mlb','nhl'].filter(lg=>$(`sl-${lg}`)?.checked);
     if(!S.leagues.length)S.leagues=['nba'];
@@ -1078,12 +1098,7 @@ const Settings = {
     Timer.syncFocus();
     this.close();
   },
-  reset(){
-    Modal.confirm('Reset All Data',
-      'This will permanently delete all your MyDayDeck data. This cannot be undone.', () => {
-        localStorage.removeItem(KEY); location.reload();
-      }, true, 'Reset');
-  }
+  reset(){if(!confirm('Reset all MyDayDeck data?'))return;localStorage.removeItem(KEY);location.reload();}
 };
 
 /* ══════════════════════════════════════════════════════════
@@ -1127,8 +1142,6 @@ function launch(){
 /* ══════════════════════════════════════════════════════════
    INIT
 ══════════════════════════════════════════════════════════ */
-document.addEventListener('keydown', e => { if (e.key === 'Escape') Modal.close(); });
-
 document.addEventListener('DOMContentLoaded',()=>{
   try {
     /* Try v5, fall back to migrating v4/v3 data */

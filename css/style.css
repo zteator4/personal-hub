@@ -481,70 +481,6 @@ kbd { font-family:var(--f-mono); font-size:0.65rem; color:var(--ink-3); border:1
 .s-accents { display:flex; gap:8px; flex-wrap:wrap; }
 .s-footer { display:flex; flex-direction:column; gap:.5rem; margin-top:auto; }
 
-/* ── App Modal ──────────────────────────────────────────── */
-.app-modal-backdrop {
-  position:fixed; inset:0; z-index:600;
-  background:rgba(26,22,18,.48); backdrop-filter:blur(4px);
-}
-.app-modal {
-  position:fixed; inset:0; z-index:601;
-  display:flex; align-items:center; justify-content:center; padding:1rem;
-}
-.app-modal-card {
-  background:var(--bg-card); border:1px solid var(--border);
-  border-radius:18px; padding:1.5rem; width:100%; max-width:420px;
-  box-shadow:0 16px 56px rgba(0,0,0,.14);
-  animation:modalIn .18s var(--ease) both;
-}
-@keyframes modalIn { from{opacity:0;transform:scale(0.96)} to{opacity:1;transform:scale(1)} }
-.app-modal-hdr {
-  display:flex; align-items:center; justify-content:space-between; margin-bottom:1.1rem;
-}
-.app-modal-title { font-size:1rem; font-weight:600; color:var(--ink); }
-.app-modal-body { display:flex; flex-direction:column; gap:.75rem; }
-.app-modal-footer {
-  display:flex; justify-content:flex-end; gap:8px;
-  margin-top:1.2rem; padding-top:1rem; border-top:1px solid var(--border);
-}
-.am-field {
-  display:flex; flex-direction:column; gap:.3rem;
-  font-size:.82rem; font-weight:500; color:var(--ink-2);
-}
-.am-field em { font-weight:400; font-style:normal; color:var(--ink-3); }
-.am-range-wrap { display:flex; align-items:center; gap:12px; padding:.3rem 0; }
-.am-range {
-  flex:1; -webkit-appearance:none; appearance:none;
-  height:5px; border-radius:999px;
-  background:var(--bg-input); border:1.5px solid var(--border-mid); outline:none; cursor:pointer;
-}
-.am-range::-webkit-slider-thumb {
-  -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
-  background:var(--accent); cursor:pointer; border:2px solid #fff;
-  box-shadow:0 1px 4px rgba(0,0,0,.2);
-}
-.am-range::-moz-range-thumb {
-  width:18px; height:18px; border-radius:50%;
-  background:var(--accent); cursor:pointer; border:2px solid #fff;
-}
-.am-range-val {
-  font-family:var(--f-mono); font-size:.88rem; font-weight:500;
-  color:var(--accent); min-width:38px; text-align:right;
-}
-.am-confirm-msg { font-size:.9rem; color:var(--ink-2); line-height:1.6; padding:.4rem 0; }
-
-/* ── Toast ──────────────────────────────────────────────── */
-.app-toast {
-  position:fixed; bottom:1.5rem; left:50%;
-  transform:translateX(-50%) translateY(10px);
-  z-index:1000; background:var(--ink); color:#fff;
-  padding:.5rem 1.2rem; border-radius:999px;
-  font-size:.85rem; font-weight:500;
-  box-shadow:0 4px 20px rgba(0,0,0,.22);
-  opacity:0; transition:opacity .25s var(--ease), transform .25s var(--ease);
-  pointer-events:none; white-space:nowrap;
-}
-.app-toast.visible { opacity:1; transform:translateX(-50%) translateY(0); }
-
 /* ── Scrollbar ──────────────────────────────────────────── */
 ::-webkit-scrollbar { width:4px; height:4px; }
 ::-webkit-scrollbar-track { background:transparent; }
@@ -552,3 +488,28 @@ kbd { font-family:var(--f-mono); font-size:0.65rem; color:var(--ink-3); border:1
 
 /* ── Empty msg ──────────────────────────────────────────── */
 .empty-msg { font-size:.85rem; color:var(--ink-3); padding:4px 0; }
+
+/* ── AI Import bar ───────────────────────────────────────── */
+.ai-import-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-mid);
+  border-radius: var(--r-lg);
+  transition: border-color var(--t), background var(--t);
+}
+.ai-import-bar:hover { border-color: var(--accent); background: var(--accent-bg); }
+.ai-import-label {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 0.85rem; font-weight: 500; color: var(--accent);
+  cursor: pointer; white-space: nowrap;
+}
+.ai-import-label svg { flex-shrink: 0; }
+.ai-import-hint { font-size: 0.75rem; color: var(--ink-3); }
+.ai-import-label:has(input:disabled) { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Loading animation ───────────────────────────────────── */
+.loading { animation: pulse-text 1.5s ease-in-out infinite; }
+@keyframes pulse-text { 0%,100%{opacity:1} 50%{opacity:.4} }
